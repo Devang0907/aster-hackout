@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Menu, X, Play } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "./Logo";
 
@@ -51,17 +51,7 @@ export function Nav() {
           ))}
         </nav>
 
-        <div className="hidden items-center justify-end gap-2.5 lg:flex">
-          <a
-            href="#simulator"
-            className={`inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] transition-colors ${
-              scrolled
-                ? "border-border bg-surface text-primary hover:bg-mist"
-                : "border-border/60 bg-background/50 text-primary hover:bg-background"
-            }`}
-          >
-            Watch demo <Play className="h-3 w-3" strokeWidth={2.2} />
-          </a>
+        <div className="hidden items-center justify-end lg:flex">
           <a
             href="#cta"
             className="rounded-full bg-primary px-5 py-2.5 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90"
@@ -103,20 +93,13 @@ export function Nav() {
                 </a>
               ))}
             </nav>
-            <div className="mt-6 flex flex-col gap-2.5">
+            <div className="mt-6">
               <a
                 href="#cta"
                 onClick={() => setOpen(false)}
-                className="rounded-full bg-primary px-5 py-3 text-center text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground"
+                className="block rounded-full bg-primary px-5 py-3 text-center text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground"
               >
                 Get started
-              </a>
-              <a
-                href="#simulator"
-                onClick={() => setOpen(false)}
-                className="rounded-full border border-border bg-surface px-5 py-3 text-center text-xs font-semibold uppercase tracking-[0.16em] text-primary"
-              >
-                Watch demo
               </a>
             </div>
           </motion.div>

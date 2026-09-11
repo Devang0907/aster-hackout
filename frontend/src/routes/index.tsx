@@ -5,7 +5,6 @@ import { Problem } from "@/components/landing/Problem";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { LeakPoints } from "@/components/landing/LeakPoints";
 import { Recommendations } from "@/components/landing/Recommendations";
-import { Simulator } from "@/components/landing/Simulator";
 import { CircularEconomy } from "@/components/landing/CircularEconomy";
 import { BusinessValue } from "@/components/landing/BusinessValue";
 import { FinalCta } from "@/components/landing/FinalCta";
@@ -39,7 +38,6 @@ function Index() {
         <HowItWorks />
         <LeakPoints />
         <Recommendations />
-        <Simulator />
         <CircularEconomy />
         <BusinessValue />
         <FinalCta />
