@@ -1,0 +1,1 @@
+"""Industrial emission detector backend."""
