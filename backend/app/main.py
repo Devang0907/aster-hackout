@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import admin, factories, health, insights, operational, reporting
+from app.api.routes import admin, catalogs, factories, health, insights, operational, reporting
 from app.core.config import get_settings
 from app.core.database import connect_database, disconnect_database
 from app.services.errors import ServiceError
@@ -14,9 +14,8 @@ from app.services.errors import ServiceError
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
-    if settings.database_url is None:
-        raise RuntimeError("DATABASE_URL must be configured")
-    await connect_database()
+    if settings.database_url is not None:
+        await connect_database()
     try:
         yield
     finally:
@@ -46,6 +45,7 @@ def create_app() -> FastAPI:
 
     application.include_router(health.router)
     application.include_router(admin.router, prefix="/api/v1")
+    application.include_router(catalogs.router, prefix="/api/v1")
     application.include_router(factories.router, prefix="/api/v1")
     application.include_router(reporting.router, prefix="/api/v1")
     application.include_router(operational.router, prefix="/api/v1")

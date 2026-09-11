@@ -113,6 +113,27 @@ python -m prisma migrate deploy --schema prisma/schema.prisma
 python prisma/seed.py
 ```
 
+To add the removable demo tenant for API and frontend verification:
+
+```powershell
+python prisma/seed.py --demo-tenant
+```
+
+The demo users use these fixed IDs so local development authentication can reference them:
+
+- Admin: `00000000-0000-0000-0000-000000000001`
+- Factory owner: `00000000-0000-0000-0000-000000000002`
+- Factory manager: `00000000-0000-0000-0000-000000000003`
+
+Remove only the demo tenant later with:
+
+```powershell
+python prisma/seed.py --cleanup-demo
+```
+
+This cleanup does not remove the reference materials, alternatives, interventions, or demo
+emission factors.
+
 For later schema changes in development:
 
 ```bash
@@ -181,6 +202,11 @@ keys/claims while keeping its UUID subject synchronized to `users.id`.
 - `/api/v1/factories/{factoryId}/carbon-results`: versioned results with leak points
 - `/api/v1/factories/{factoryId}/recommendations`: traceable recommendation listing/status changes
 - `/api/v1/factories/{factoryId}/simulations`: JSON-assumption what-if scenarios
+- `/api/v1/catalogs/{materials|material-alternatives|interventions|emission-factors}`: authenticated read-only catalogs
+
+The frontend-facing API currently contains 23 route paths. Calculation and ML persistence is
+available through internal services in `app/services/calculations.py`; it is intentionally not
+exposed as a public owner/manager endpoint.
 
 ## Data model: all 18 models
 

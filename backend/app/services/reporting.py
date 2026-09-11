@@ -18,7 +18,27 @@ async def create_reporting_period(
     await assert_factory_operational_access(user, factory_id, database)
     data = to_prisma_data(payload.model_dump())
     data["factoryId"] = str(factory_id)
-    return await database.reportingperiod.create(data=data)
+    existing = await database.reportingperiod.find_first(
+        where={
+            "factoryId": str(factory_id),
+            "periodStart": data["periodStart"],
+            "periodEnd": data["periodEnd"],
+        }
+    )
+    if existing is not None:
+        raise ConflictError("reporting period already exists")
+    async with database.tx() as transaction:
+        period = await transaction.reportingperiod.create(data=data)
+        await transaction.auditlog.create(
+            data={
+                "userId": str(user.id),
+                "factoryId": str(factory_id),
+                "action": "REPORTING_PERIOD_CREATED",
+                "entityType": "ReportingPeriod",
+                "entityId": period.id,
+            }
+        )
+    return period
 
 
 async def list_reporting_periods(

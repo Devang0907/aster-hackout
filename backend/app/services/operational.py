@@ -39,6 +39,12 @@ async def create_operational_record(
     await assert_factory_operational_access(user, factory_id, database)
     period_id = payload.reportingPeriodId
     await _assert_period(factory_id, period_id, database)
+    if kind == "material":
+        material = await database.material.find_first(
+            where={"id": str(payload.materialId), "isActive": True}
+        )
+        if material is None:
+            raise NotFoundError("material not found")
     delegate_name, action = DELEGATES[kind]
     data = to_prisma_data(payload.model_dump(exclude_none=True))
     data["factoryId"] = str(factory_id)
@@ -64,6 +70,8 @@ async def list_operational_records(
     reporting_period_id: UUID | None = None,
 ) -> list[Any]:
     await assert_factory_operational_access(user, factory_id, database)
+    if reporting_period_id is not None:
+        await _assert_period(factory_id, reporting_period_id, database)
     delegate_name, _ = DELEGATES[kind]
     where: dict[str, Any] = {"factoryId": str(factory_id)}
     if reporting_period_id:

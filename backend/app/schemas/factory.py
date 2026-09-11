@@ -38,7 +38,6 @@ class FactoryUpdate(ApiModel):
     productionCapacity: NonNegativeDecimal | None = None
     productionUnit: Annotated[str, Field(max_length=50)] | None = None
     establishedYear: Annotated[int, Field(ge=1)] | None = None
-    isActive: bool | None = None
 
 
 class ManagerAssignment(ApiModel):

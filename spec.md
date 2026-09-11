@@ -388,7 +388,7 @@ fully express:
 
 ## 9. API structure
 
-The API currently exposes 19 OpenAPI paths.
+The API currently exposes 23 OpenAPI paths, including authenticated read-only catalog endpoints.
 
 ### Health
 
@@ -437,6 +437,13 @@ Lists may be filtered by `reporting_period_id`.
 - `PATCH /api/v1/factories/{factory_id}/recommendations/{recommendation_id}`
 - `GET /api/v1/factories/{factory_id}/simulations`
 - `POST /api/v1/factories/{factory_id}/simulations`
+
+### Reference catalogs
+
+- `GET /api/v1/catalogs/materials`
+- `GET /api/v1/catalogs/material-alternatives`
+- `GET /api/v1/catalogs/interventions`
+- `GET /api/v1/catalogs/emission-factors`
 
 Carbon/pipeline result creation is intended for an internal calculation/ML worker rather than a
 normal owner/manager endpoint.
