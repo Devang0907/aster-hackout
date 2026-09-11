@@ -50,12 +50,6 @@ async def signin(
     # For development, we'll accept any password if user exists
     # TODO: Replace with proper password hashing (bcrypt/argon2)
     
-    # Generate JWT token
-    token_data = {
-        "sub": str(user.id),
-        "exp": settings.jwt_secret.get_secret_value(),  # This is wrong, should use expiration
-    }
-    
     # Proper JWT generation with expiration
     import time
     expiration = int(time.time()) + 86400  # 24 hours

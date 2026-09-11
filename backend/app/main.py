@@ -5,7 +5,16 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import admin, auth, catalogs, factories, health, insights, operational, reporting
+from app.api.routes import (
+    admin,
+    auth,
+    catalogs,
+    factories,
+    health,
+    insights,
+    operational,
+    reporting,
+)
 from app.core.config import get_settings
 from app.core.database import connect_database, disconnect_database
 from app.services.errors import ServiceError
@@ -30,15 +39,19 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    if settings.cors_origins:
-        origins = [origin.strip() for origin in settings.cors_origins.split(",")]
-        application.add_middleware(
-            CORSMiddleware,
-            allow_origins=origins,
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
+    # Debug CORS configuration
+    print(f"CORS_ORIGINS from env: {settings.cors_origins}")
+    print(f"CORS origin list: {settings.cors_origin_list}")
+
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origin_regex=r".*",
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+        max_age=600,
+    )
 
     @application.exception_handler(ServiceError)
     async def service_error_handler(_: Request, exc: ServiceError) -> JSONResponse:
