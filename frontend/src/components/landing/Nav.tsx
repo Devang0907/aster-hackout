@@ -51,12 +51,22 @@ export function Nav() {
           ))}
         </nav>
 
-        <div className="hidden items-center justify-end lg:flex">
+        <div className="hidden items-center justify-end gap-2.5 lg:flex">
           <a
-            href="#cta"
+            href="/signin"
+            className={`rounded-full border px-5 py-2.5 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] transition-colors ${
+              scrolled
+                ? "border-border bg-surface text-primary hover:bg-mist"
+                : "border-border/60 bg-background/50 text-primary hover:bg-background"
+            }`}
+          >
+            Sign in
+          </a>
+          <a
+            href="/register"
             className="rounded-full bg-primary px-5 py-2.5 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90"
           >
-            Get started
+            Register
           </a>
         </div>
 
@@ -93,13 +103,20 @@ export function Nav() {
                 </a>
               ))}
             </nav>
-            <div className="mt-6">
+            <div className="mt-6 flex flex-col gap-2.5">
               <a
-                href="#cta"
+                href="/signin"
                 onClick={() => setOpen(false)}
-                className="block rounded-full bg-primary px-5 py-3 text-center text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground"
+                className="rounded-full border border-border bg-surface px-5 py-3 text-center text-xs font-semibold uppercase tracking-[0.16em] text-primary"
               >
-                Get started
+                Sign in
+              </a>
+              <a
+                href="/register"
+                onClick={() => setOpen(false)}
+                className="rounded-full bg-primary px-5 py-3 text-center text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground"
+              >
+                Register
               </a>
             </div>
           </motion.div>

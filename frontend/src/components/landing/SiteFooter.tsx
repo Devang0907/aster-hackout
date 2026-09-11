@@ -43,12 +43,20 @@ export function SiteFooter() {
             <p className="text-sm text-muted-foreground">
               Ready to transform your factory emissions into a competitive advantage?
             </p>
-            <a
-              href="#cta"
-              className="inline-block rounded-full bg-primary px-6 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90"
-            >
-              Start Free Trial
-            </a>
+            <div className="flex gap-3">
+              <a
+                href="/signin"
+                className="inline-block rounded-full border border-border bg-surface px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-primary transition-colors hover:bg-mist"
+              >
+                Sign in
+              </a>
+              <a
+                href="/register"
+                className="inline-block rounded-full bg-primary px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                Register
+              </a>
+            </div>
           </div>
         </div>
 
