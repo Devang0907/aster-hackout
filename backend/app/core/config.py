@@ -1,7 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
-import json
 
 from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,8 +19,7 @@ class Settings(BaseSettings):
     jwt_algorithm: Literal["HS256", "HS384", "HS512"] = "HS256"
     jwt_audience: str | None = None
     jwt_issuer: str | None = None
-    cors_origins: list[str] = []
-    _cors_origins_str: str | None = None
+    cors_origins: str = ""
 
     model_config = SettingsConfigDict(
         env_file=(BACKEND_ROOT / ".env", ".env"),
@@ -29,19 +27,6 @@ class Settings(BaseSettings):
         extra="ignore",
         case_sensitive=False,
     )
-
-    @model_validator(mode="before")
-    @classmethod
-    def parse_cors_origins(cls, data: dict) -> dict:
-        if isinstance(data, dict) and "_cors_origins_str" in data:
-            cors_str = data["_cors_origins_str"]
-            if cors_str:
-                try:
-                    data["cors_origins"] = json.loads(cors_str)
-                except json.JSONDecodeError:
-                    # Fallback: split by comma if JSON parsing fails
-                    data["cors_origins"] = [origin.strip() for origin in cors_str.split(",")]
-        return data
 
     @model_validator(mode="after")
     def validate_security_mode(self) -> "Settings":
