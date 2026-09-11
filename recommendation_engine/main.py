@@ -1,5 +1,6 @@
-from services.recommendation_engine import generate_recommendations
-
+from recommendation_engine.services.recommendation_engine import (
+    generate_recommendations,
+)
 
 # Example factory emissions
 emissions = {

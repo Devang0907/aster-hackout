@@ -11,6 +11,9 @@ class UserDelegate:
     async def find_unique(self, where):  # noqa: ANN001
         return SimpleNamespace(id=where["id"])
 
+    async def update(self, where, data):  # noqa: ANN001
+        return SimpleNamespace(id=where["id"], **data)
+
 
 class AuditDelegate:
     def __init__(self) -> None:

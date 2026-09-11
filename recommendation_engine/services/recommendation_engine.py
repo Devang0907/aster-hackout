@@ -1,15 +1,14 @@
-from services.candidate_generator import generate_candidates
-from services.ml_predictor import predict_co2_reduction
-from services.score_calculator import (
-    calculate_roi,
-    calculate_score
-)
+from .candidate_generator import generate_candidates
+from .ml_predictor import predict_co2_reduction
+from .score_calculator import calculate_roi, calculate_score
 
 
-def generate_recommendations(emissions, ranked_sources ):
+def generate_recommendations(
+    emissions, ranked_sources, max_results=3, interventions=None
+):
 
     candidates = generate_candidates(
-        ranked_sources
+        ranked_sources, interventions=interventions
     )
 
     if not candidates:
@@ -116,4 +115,4 @@ def generate_recommendations(emissions, ranked_sources ):
         reverse=True
     )
 
-    return results[:3]
+    return results[:max_results]
