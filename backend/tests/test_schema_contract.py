@@ -161,6 +161,32 @@ def test_simulations_preserve_json_assumptions() -> None:
     assert '"assumptions" JSONB NOT NULL' in MIGRATION
 
 
+def test_simulation_reduction_values_must_be_consistent() -> None:
+    with pytest.raises(ValidationError):
+        SimulationCreate(
+            baseResultId=uuid4(),
+            name="Inconsistent scenario",
+            assumptions={},
+            baselineCo2e=100,
+            resultingCo2e=65,
+            co2Reduction=20,
+            co2ReductionPercentage=20,
+        )
+
+
+def test_zero_baseline_requires_zero_reduction_values() -> None:
+    with pytest.raises(ValidationError):
+        SimulationCreate(
+            baseResultId=uuid4(),
+            name="Invalid zero baseline",
+            assumptions={},
+            baselineCo2e=0,
+            resultingCo2e=0,
+            co2Reduction=0,
+            co2ReductionPercentage=1,
+        )
+
+
 def test_audit_log_records_can_be_created() -> None:
     log = AuditLogCreate(action="FACTORY_CREATED", entityType="Factory", metadata={"x": 1})
     assert log.action == "FACTORY_CREATED"

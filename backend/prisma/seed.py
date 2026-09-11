@@ -1,4 +1,6 @@
+import argparse
 import asyncio
+from datetime import date
 from decimal import Decimal
 
 from prisma import Prisma
@@ -48,8 +50,164 @@ DEMO_EMISSION_FACTORS = [
     ("transport", "road freight", Decimal("0.10000000"), "kgCO2e/tonne-km"),
 ]
 
+DEMO_ADMIN_ID = "00000000-0000-0000-0000-000000000001"
+DEMO_OWNER_ID = "00000000-0000-0000-0000-000000000002"
+DEMO_MANAGER_ID = "00000000-0000-0000-0000-000000000003"
+DEMO_FACTORY_ID = "00000000-0000-0000-0000-000000000010"
+DEMO_PERIOD_ID = "00000000-0000-0000-0000-000000000020"
+DEMO_OWNER_EMAIL = "demo-owner@example.com"
+DEMO_MANAGER_EMAIL = "demo-manager@example.com"
+DEMO_ADMIN_EMAIL = "demo-admin@example.com"
 
-async def seed() -> None:
+
+async def seed_demo_tenant(database: Prisma, material_ids: dict[str, str]) -> None:
+    await database.user.upsert(
+        where={"id": DEMO_ADMIN_ID},
+        data={
+            "create": {
+                "id": DEMO_ADMIN_ID,
+                "fullName": "Demo Platform Admin",
+                "email": DEMO_ADMIN_EMAIL,
+                "role": "admin",
+            },
+            "update": {"isActive": True},
+        },
+    )
+    await database.user.upsert(
+        where={"id": DEMO_OWNER_ID},
+        data={
+            "create": {
+                "id": DEMO_OWNER_ID,
+                "fullName": "Demo Factory Owner",
+                "email": DEMO_OWNER_EMAIL,
+                "role": "factory_owner",
+            },
+            "update": {"isActive": True},
+        },
+    )
+    await database.user.upsert(
+        where={"id": DEMO_MANAGER_ID},
+        data={
+            "create": {
+                "id": DEMO_MANAGER_ID,
+                "fullName": "Demo Factory Manager",
+                "email": DEMO_MANAGER_EMAIL,
+                "role": "factory_manager",
+            },
+            "update": {"isActive": True},
+        },
+    )
+    await database.factory.upsert(
+        where={"id": DEMO_FACTORY_ID},
+        data={
+            "create": {
+                "id": DEMO_FACTORY_ID,
+                "ownerId": DEMO_OWNER_ID,
+                "managerId": DEMO_MANAGER_ID,
+                "name": "Demo Circular Textiles Plant",
+                "industryType": "Textiles",
+                "description": "Removable demo tenant for local and staging verification.",
+                "city": "Ahmedabad",
+                "state": "Gujarat",
+                "country": "India",
+                "employees": 120,
+                "productionCapacity": Decimal("50000"),
+                "productionUnit": "tonnes/year",
+                "establishedYear": 2018,
+            },
+            "update": {"isActive": True, "managerId": DEMO_MANAGER_ID},
+        },
+    )
+    period = await database.reportingperiod.find_unique(where={"id": DEMO_PERIOD_ID})
+    if period is None:
+        await database.reportingperiod.create(
+            data={
+                "id": DEMO_PERIOD_ID,
+                "factoryId": DEMO_FACTORY_ID,
+                "periodStart": date(2026, 1, 1),
+                "periodEnd": date(2026, 1, 31),
+                "status": "draft",
+            }
+        )
+
+    records = [
+        (
+            database.factorymaterialusage,
+            {"factoryId": DEMO_FACTORY_ID, "reportingPeriodId": DEMO_PERIOD_ID},
+            {
+                "factoryId": DEMO_FACTORY_ID,
+                "reportingPeriodId": DEMO_PERIOD_ID,
+                "materialId": material_ids["MAT-VPOLY"],
+                "quantity": Decimal("1200"),
+                "unit": "kg",
+                "recycledPercentage": Decimal("25"),
+                "supplierName": "Demo Fibre Supplier",
+            },
+        ),
+        (
+            database.energyusage,
+            {"factoryId": DEMO_FACTORY_ID, "reportingPeriodId": DEMO_PERIOD_ID},
+            {
+                "factoryId": DEMO_FACTORY_ID,
+                "reportingPeriodId": DEMO_PERIOD_ID,
+                "energyType": "electricity",
+                "quantity": Decimal("18000"),
+                "unit": "kWh",
+                "renewablePercentage": Decimal("35"),
+                "source": "grid and rooftop solar",
+            },
+        ),
+        (
+            database.wastestream,
+            {"factoryId": DEMO_FACTORY_ID, "reportingPeriodId": DEMO_PERIOD_ID},
+            {
+                "factoryId": DEMO_FACTORY_ID,
+                "reportingPeriodId": DEMO_PERIOD_ID,
+                "wasteType": "textile offcuts",
+                "quantity": Decimal("100"),
+                "unit": "kg",
+                "treatmentMethod": "recovery",
+                "recycledQuantity": Decimal("70"),
+                "recoveredQuantity": Decimal("20"),
+                "disposedQuantity": Decimal("10"),
+            },
+        ),
+        (
+            database.logistics,
+            {"factoryId": DEMO_FACTORY_ID, "reportingPeriodId": DEMO_PERIOD_ID},
+            {
+                "factoryId": DEMO_FACTORY_ID,
+                "reportingPeriodId": DEMO_PERIOD_ID,
+                "transportType": "raw material delivery",
+                "mode": "road",
+                "distanceKm": Decimal("240"),
+                "weightTonnes": Decimal("1.2"),
+                "trips": 2,
+                "fuelType": "diesel",
+            },
+        ),
+    ]
+    for delegate, where, data in records:
+        if await delegate.find_first(where=where) is None:
+            await delegate.create(data=data)
+
+
+async def cleanup_demo_tenant(database: Prisma) -> None:
+    for delegate in (
+        database.factorymaterialusage,
+        database.energyusage,
+        database.wastestream,
+        database.logistics,
+    ):
+        await delegate.delete_many(where={"factoryId": DEMO_FACTORY_ID})
+    await database.reportingperiod.delete_many(where={"factoryId": DEMO_FACTORY_ID})
+    await database.factory.delete_many(where={"id": DEMO_FACTORY_ID})
+    await database.user.delete_many(
+        where={"id": {"in": [DEMO_ADMIN_ID, DEMO_OWNER_ID, DEMO_MANAGER_ID]}}
+    )
+
+
+async def seed(include_demo_tenant: bool = False) -> None:
     database = Prisma()
     await database.connect()
     try:
@@ -133,9 +291,34 @@ async def seed() -> None:
                         "uncertaintyPercentage": Decimal("100"),
                     }
                 )
+        if include_demo_tenant:
+            await seed_demo_tenant(database, material_ids)
     finally:
         await database.disconnect()
 
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    parser = argparse.ArgumentParser(description="Seed reference and optional demo data.")
+    parser.add_argument(
+        "--demo-tenant",
+        action="store_true",
+        help="also create the removable demo users, factory, period, and operational records",
+    )
+    parser.add_argument(
+        "--cleanup-demo",
+        action="store_true",
+        help="remove the demo tenant without removing reference data",
+    )
+    args = parser.parse_args()
+    if args.cleanup_demo:
+        async def cleanup() -> None:
+            database = Prisma()
+            await database.connect()
+            try:
+                await cleanup_demo_tenant(database)
+            finally:
+                await database.disconnect()
+
+        asyncio.run(cleanup())
+    else:
+        asyncio.run(seed(include_demo_tenant=args.demo_tenant))

@@ -47,10 +47,21 @@ async def update_factory(
     database: Any,
 ) -> Any:
     await assert_factory_owner_access(user, factory_id, database)
-    return await database.factory.update(
-        where={"id": str(factory_id)},
-        data=to_prisma_data(payload.model_dump(exclude_none=True)),
-    )
+    async with database.tx() as transaction:
+        factory = await transaction.factory.update(
+            where={"id": str(factory_id)},
+            data=to_prisma_data(payload.model_dump(exclude_none=True)),
+        )
+        await transaction.auditlog.create(
+            data={
+                "userId": str(user.id),
+                "factoryId": str(factory_id),
+                "action": "FACTORY_UPDATED",
+                "entityType": "Factory",
+                "entityId": str(factory_id),
+            }
+        )
+    return factory
 
 
 async def create_and_assign_manager(
@@ -76,6 +87,8 @@ async def create_and_assign_manager(
     )
     if existing_role is not None and existing_role != UserRole.factory_manager.value:
         raise ConflictError("the supplied user ID belongs to a non-manager account")
+    if existing_by_id is not None and not existing_by_id.isActive:
+        raise ConflictError("the supplied manager account is inactive")
 
     manager_data = to_prisma_data(payload.model_dump(exclude_none=True))
     manager_data["email"] = str(payload.email).lower()

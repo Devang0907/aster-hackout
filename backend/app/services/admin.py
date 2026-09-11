@@ -53,7 +53,19 @@ async def set_user_active(user: UserContext, user_id: UUID, active: bool, databa
     found = await database.user.find_unique(where={"id": str(user_id)})
     if found is None:
         raise NotFoundError("user not found")
-    return await database.user.update(where={"id": str(user_id)}, data={"isActive": active})
+    async with database.tx() as transaction:
+        result = await transaction.user.update(
+            where={"id": str(user_id)}, data={"isActive": active}
+        )
+        await transaction.auditlog.create(
+            data={
+                "userId": str(user.id),
+                "action": "USER_ACTIVATED" if active else "USER_DEACTIVATED",
+                "entityType": "User",
+                "entityId": str(user_id),
+            }
+        )
+    return result
 
 
 async def set_factory_active(
@@ -63,4 +75,17 @@ async def set_factory_active(
     found = await database.factory.find_unique(where={"id": str(factory_id)})
     if found is None:
         raise NotFoundError("factory not found")
-    return await database.factory.update(where={"id": str(factory_id)}, data={"isActive": active})
+    async with database.tx() as transaction:
+        result = await transaction.factory.update(
+            where={"id": str(factory_id)}, data={"isActive": active}
+        )
+        await transaction.auditlog.create(
+            data={
+                "userId": str(user.id),
+                "factoryId": str(factory_id),
+                "action": "FACTORY_ACTIVATED" if active else "FACTORY_DEACTIVATED",
+                "entityType": "Factory",
+                "entityId": str(factory_id),
+            }
+        )
+    return result
