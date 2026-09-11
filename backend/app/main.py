@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import admin, catalogs, factories, health, insights, operational, reporting
+from app.api.routes import admin, auth, catalogs, factories, health, insights, operational, reporting
 from app.core.config import get_settings
 from app.core.database import connect_database, disconnect_database
 from app.services.errors import ServiceError
@@ -45,6 +45,7 @@ def create_app() -> FastAPI:
 
     application.include_router(health.router)
     application.include_router(admin.router, prefix="/api/v1")
+    application.include_router(auth.router, prefix="/api/v1")
     application.include_router(catalogs.router, prefix="/api/v1")
     application.include_router(factories.router, prefix="/api/v1")
     application.include_router(reporting.router, prefix="/api/v1")

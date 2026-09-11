@@ -1,5 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { post } from "@/lib/api";
+import { setToken, setUser } from "@/lib/auth";
 
 type Step = "email" | "otp" | "details";
 
@@ -14,28 +16,72 @@ function Register() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
-  const handleEmailSubmit = (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate sending OTP
-    console.log("Sending OTP to:", email);
-    setStep("otp");
+    setError("");
+    setLoading(true);
+
+    try {
+      // Simulate sending OTP - in production this would call an OTP endpoint
+      // For now, we'll skip OTP and go directly to details
+      setStep("details");
+    } catch (err) {
+      setError("Failed to send verification code");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate OTP verification
-    console.log("Verifying OTP:", otp);
-    setStep("details");
+    setError("");
+    setLoading(true);
+
+    try {
+      // Simulate OTP verification
+      setStep("details");
+    } catch (err) {
+      setError("Invalid verification code");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDetailsSubmit = (e: React.FormEvent) => {
+  const handleDetailsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      setError("Passwords do not match");
       return;
     }
-    console.log("Registration complete:", { email, name, password });
+
+    setLoading(true);
+
+    try {
+      const response = await post("/api/v1/auth/register", {
+        fullName: name,
+        email,
+        password,
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setToken(data.token);
+        setUser(data.user);
+        navigate({ to: "/dashboard" as any });
+      } else {
+        setError(data.detail || "Registration failed");
+      }
+    } catch (err) {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -55,6 +101,12 @@ function Register() {
             {step === "otp" && "Enter the verification code sent to your email"}
             {step === "details" && "Complete your profile"}
           </p>
+
+          {error && (
+            <div className="mb-6 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
+              {error}
+            </div>
+          )}
 
           {step === "email" && (
             <form onSubmit={handleEmailSubmit} className="space-y-5">
@@ -163,9 +215,10 @@ function Register() {
               </div>
               <button
                 type="submit"
-                className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90"
+                disabled={loading}
+                className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                Create Account
+                {loading ? "Creating account..." : "Create Account"}
               </button>
             </form>
           )}
