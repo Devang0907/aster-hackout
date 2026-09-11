@@ -8,9 +8,10 @@ from app.schemas.carbon import (
     CarbonResultCreate,
     EmissionSourceCreate,
     MlPipelineRunCreate,
+    PipelineRunStatus,
 )
 from app.schemas.recommendation import RecommendationCreate
-from app.services.errors import NotFoundError
+from app.services.errors import ConflictError, NotFoundError
 
 
 async def _period(factory_id: UUID, period_id: UUID, database: Any) -> Any:
@@ -40,6 +41,17 @@ async def update_pipeline_run(
     run = await database.mlpipelinerun.find_unique(where={"id": str(run_id)})
     if run is None:
         raise NotFoundError("pipeline run not found")
+    if status not in {item.value for item in PipelineRunStatus}:
+        raise ConflictError("invalid pipeline run status")
+    current_status = str(getattr(run.status, "value", run.status))
+    valid_transitions = {
+        "queued": {"running", "failed"},
+        "running": {"completed", "failed"},
+        "completed": set(),
+        "failed": set(),
+    }
+    if status != current_status and status not in valid_transitions[current_status]:
+        raise ConflictError(f"pipeline run cannot move from {current_status} to {status}")
     now = datetime.now(UTC)
     data: dict[str, Any] = {"status": status}
     if status == "running":
@@ -49,6 +61,53 @@ async def update_pipeline_run(
     if error_message is not None:
         data["errorMessage"] = error_message
     return await database.mlpipelinerun.update(where={"id": str(run_id)}, data=data)
+
+
+async def complete_pipeline_run(
+    factory_id: UUID,
+    run_id: UUID,
+    result_payload: CarbonResultCreate,
+    source_payloads: list[EmissionSourceCreate],
+    recommendation_payloads: list[RecommendationCreate],
+    database: Any,
+) -> Any:
+    run = await database.mlpipelinerun.find_first(
+        where={"id": str(run_id), "factoryId": str(factory_id)}
+    )
+    if run is None:
+        raise NotFoundError("pipeline run not found")
+    current_status = str(getattr(run.status, "value", run.status))
+    if current_status != "running":
+        raise ConflictError("only running pipeline runs may be completed")
+    period = await _period(factory_id, result_payload.reportingPeriodId, database)
+    if str(run.reportingPeriodId) != str(period.id):
+        raise ConflictError("pipeline run and carbon result must use the same reporting period")
+
+    result_payload = result_payload.model_copy(update={"pipelineRunId": run_id})
+    async with database.tx() as transaction:
+        result = await transaction.carbonresult.create(
+            data=to_prisma_data(result_payload.model_dump(exclude_none=True))
+            | {"factoryId": str(factory_id)}
+        )
+        for payload in source_payloads:
+            source_data = to_prisma_data(payload.model_dump(exclude_none=True))
+            source_data["resultId"] = result.id
+            await transaction.emissionsource.create(data=source_data)
+        for payload in recommendation_payloads:
+            recommendation_data = to_prisma_data(payload.model_dump(exclude_none=True))
+            recommendation_data["factoryId"] = str(factory_id)
+            recommendation_data["resultId"] = result.id
+            await transaction.recommendation.create(data=recommendation_data)
+        completed_at = datetime.now(UTC)
+        await transaction.mlpipelinerun.update(
+            where={"id": str(run_id)},
+            data={"status": "completed", "completedAt": completed_at},
+        )
+        await transaction.reportingperiod.update(
+            where={"id": str(period.id)},
+            data={"status": "completed"},
+        )
+    return result
 
 
 async def create_carbon_result(

@@ -1,6 +1,6 @@
 import argparse
 import asyncio
-from datetime import date
+from datetime import datetime
 from decimal import Decimal
 
 from prisma import Prisma
@@ -118,17 +118,19 @@ async def seed_demo_tenant(database: Prisma, material_ids: dict[str, str]) -> No
             "update": {"isActive": True, "managerId": DEMO_MANAGER_ID},
         },
     )
-    period = await database.reportingperiod.find_unique(where={"id": DEMO_PERIOD_ID})
-    if period is None:
-        await database.reportingperiod.create(
-            data={
+    await database.reportingperiod.upsert(
+        where={"id": DEMO_PERIOD_ID},
+        data={
+            "create": {
                 "id": DEMO_PERIOD_ID,
                 "factoryId": DEMO_FACTORY_ID,
-                "periodStart": date(2026, 1, 1),
-                "periodEnd": date(2026, 1, 31),
+                "periodStart": datetime(2026, 1, 1),
+                "periodEnd": datetime(2026, 1, 31),
                 "status": "draft",
-            }
-        )
+            },
+            "update": {},
+        },
+    )
 
     records = [
         (
