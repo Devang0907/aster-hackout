@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { get } from "@/lib/api";
+import { DecimalValue, formatKgCo2eAsTonnes } from "@/lib/emissions";
 import { FactoryPageShell } from "@/components/dashboard/FactoryPageShell";
 
 export const Route = createFileRoute("/dashboard/leak-points")({ component: LeakPoints });
@@ -8,9 +9,10 @@ export const Route = createFileRoute("/dashboard/leak-points")({ component: Leak
 interface EmissionSource {
   id: string;
   sourceName: string;
-  emissionsCo2e: number;
-  percentage: number;
+  emissionsCo2e: DecimalValue;
+  percentage: DecimalValue;
   severity: string;
+  rank: number;
   explanation?: string;
 }
 
@@ -25,13 +27,24 @@ function LeakPoints() {
 function LeakPointContent({ factoryId }: { factoryId: string }) {
   const [sources, setSources] = useState<EmissionSource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    setLoading(true);
+    setError("");
     get(`/api/v1/factories/${factoryId}/carbon-results`)
       .then(async (response) => {
-        const results = response.ok ? await response.json() : [];
-        setSources(results[0]?.emissionSources || []);
+        const results = await response.json();
+        if (!response.ok) throw new Error(results.detail || "Unable to load leak points");
+        setSources(
+          [...(results[0]?.emissionSources || [])].sort(
+            (left: EmissionSource, right: EmissionSource) => left.rank - right.rank,
+          ),
+        );
       })
+      .catch((caught) =>
+        setError(caught instanceof Error ? caught.message : "Unable to load leak points"),
+      )
       .finally(() => setLoading(false));
   }, [factoryId]);
 
@@ -46,9 +59,9 @@ function LeakPointContent({ factoryId }: { factoryId: string }) {
       </p>
       {loading ? (
         <div className="mt-6 h-32 animate-pulse rounded-xl bg-mist" />
-      ) : sources.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">
-          Run an emissions analysis to identify leak points.
+      ) : error || sources.length === 0 ? (
+        <p className={`mt-6 text-sm ${error ? "text-red-700" : "text-muted-foreground"}`}>
+          {error || "Run an emissions analysis to identify leak points."}
         </p>
       ) : (
         <div className="mt-6 space-y-3">
@@ -62,7 +75,7 @@ function LeakPointContent({ factoryId }: { factoryId: string }) {
                   </p>
                 </div>
                 <p className="text-lg font-semibold text-primary">
-                  {Number(source.emissionsCo2e).toFixed(2)} t
+                  {formatKgCo2eAsTonnes(source.emissionsCo2e)}
                 </p>
               </div>
               {source.explanation && (

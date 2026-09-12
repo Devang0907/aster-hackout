@@ -62,7 +62,7 @@ async def create_reporting_period(
             raise
         period_status = str(getattr(period.status, "value", period.status))
         if period_status != "draft":
-            raise ConflictError("reporting period already exists and has been submitted")
+            raise ConflictError("reporting period already exists and has been submitted") from None
     return period
 
 
@@ -73,6 +73,31 @@ async def list_reporting_periods(
     return await database.reportingperiod.find_many(
         where={"factoryId": str(factory_id)}, order={"periodStart": "desc"}
     )
+
+
+async def delete_reporting_period(
+    factory_id: UUID,
+    period_id: UUID,
+    user: UserContext,
+    database: Any,
+) -> None:
+    await assert_factory_operational_access(user, factory_id, database)
+    period = await database.reportingperiod.find_first(
+        where={"id": str(period_id), "factoryId": str(factory_id)}
+    )
+    if period is None:
+        raise NotFoundError("reporting period not found")
+    async with database.tx() as transaction:
+        await transaction.reportingperiod.delete(where={"id": str(period_id)})
+        await transaction.auditlog.create(
+            data={
+                "userId": str(user.id),
+                "factoryId": str(factory_id),
+                "action": "REPORTING_PERIOD_DELETED",
+                "entityType": "ReportingPeriod",
+                "entityId": str(period_id),
+            }
+        )
 
 
 async def submit_reporting_period(

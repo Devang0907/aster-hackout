@@ -15,7 +15,7 @@ export function ManagerAccountForm({ factoryId }: { factoryId: string }) {
     setError("");
     setLoading(true);
     try {
-      const response = await post(`/api/v1/factories/${factoryId}/manager`, form);
+      const response = await post(`/api/v1/factories/${factoryId}/manager`, { manager: form });
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || "Unable to create manager account");
       setMessage(

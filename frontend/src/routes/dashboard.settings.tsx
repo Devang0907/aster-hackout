@@ -3,7 +3,6 @@ import { FactoryPageShell } from "@/components/dashboard/FactoryPageShell";
 import { FactoryProfileForm } from "@/components/dashboard/FactoryProfileForm";
 import { FactoryOnboarding } from "@/components/dashboard/FactoryOnboarding";
 import { getUser } from "@/lib/auth";
-import { ManagerAccountForm } from "@/components/dashboard/ManagerAccountForm";
 
 export const Route = createFileRoute("/dashboard/settings")({ component: Settings });
 
@@ -17,10 +16,7 @@ function Settings() {
             <FactoryOnboarding onCreated={() => window.location.reload()} />
           )}
           {user?.role === "factory_owner" ? (
-            <>
-              <FactoryProfileForm factory={factory} onUpdated={() => undefined} />
-              <ManagerAccountForm factoryId={factory.id} />
-            </>
+            <FactoryProfileForm factory={factory} onUpdated={() => undefined} />
           ) : (
             <section className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Factory access</p>

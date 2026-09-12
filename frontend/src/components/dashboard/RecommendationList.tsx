@@ -1,52 +1,59 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { get, patch } from "@/lib/api";
+import { DecimalValue, formatKgCo2eAsTonnes } from "@/lib/emissions";
 
 interface Recommendation {
   id: string;
   priority: number;
   status: string;
-  estimatedCo2Reduction?: number;
-  estimatedCost?: number;
-  paybackMonths?: number;
+  recommendationScore?: DecimalValue;
+  estimatedCo2Reduction?: DecimalValue;
+  estimatedCost?: DecimalValue;
+  estimatedAnnualSavings?: DecimalValue;
+  paybackMonths?: DecimalValue;
+  feasibilityScore?: DecimalValue;
   aiExplanation?: string;
   intervention?: { name?: string; category?: string };
 }
 
 interface RecommendationListProps {
   factoryId: string;
+  onStatusChanged?: () => void;
 }
 
-export function RecommendationList({ factoryId }: RecommendationListProps) {
+export function RecommendationList({ factoryId, onStatusChanged }: RecommendationListProps) {
   const [items, setItems] = useState<Recommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const load = async () => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
       const response = await get(`/api/v1/factories/${factoryId}/recommendations`);
-      if (response.ok) setItems(await response.json());
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Unable to load recommendations");
+      setItems(data);
+    } catch (caught) {
+      setItems([]);
+      setError(caught instanceof Error ? caught.message : "Unable to load recommendations");
     } finally {
       setLoading(false);
     }
-  };
+  }, [factoryId]);
 
   useEffect(() => {
-    async function fetchRecommendations() {
-      try {
-        const response = await get(`/api/v1/factories/${factoryId}/recommendations`);
-        if (response.ok) setItems(await response.json());
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchRecommendations();
-  }, [factoryId]);
+    void load();
+  }, [load]);
 
   const updateStatus = async (id: string, status: "viewed" | "accepted" | "rejected") => {
     const response = await patch(`/api/v1/factories/${factoryId}/recommendations/${id}`, {
       status,
     });
-    if (response.ok) load();
+    if (response.ok) {
+      await load();
+      onStatusChanged?.();
+    }
   };
 
   return (
@@ -69,8 +76,8 @@ export function RecommendationList({ factoryId }: RecommendationListProps) {
           <div className="h-16 animate-pulse rounded-lg bg-mist" />
         </div>
       ) : items.length === 0 ? (
-        <p className="mt-6 text-sm text-muted-foreground">
-          Run an emissions analysis to receive prioritized actions.
+        <p className={`mt-6 text-sm ${error ? "text-red-700" : "text-muted-foreground"}`}>
+          {error || "Run an emissions analysis to receive prioritized actions."}
         </p>
       ) : (
         <div className="mt-6 space-y-3">
@@ -87,7 +94,7 @@ export function RecommendationList({ factoryId }: RecommendationListProps) {
                 </div>
                 <span className="text-sm font-semibold text-primary">
                   {item.estimatedCo2Reduction
-                    ? `${Number(item.estimatedCo2Reduction).toFixed(1)} t CO2e`
+                    ? formatKgCo2eAsTonnes(item.estimatedCo2Reduction)
                     : "Impact pending"}
                 </span>
               </div>
@@ -98,18 +105,29 @@ export function RecommendationList({ factoryId }: RecommendationListProps) {
                 {item.estimatedCost != null && (
                   <span>Cost: {Number(item.estimatedCost).toLocaleString()}</span>
                 )}
+                {item.estimatedAnnualSavings != null && (
+                  <span>Savings/year: {Number(item.estimatedAnnualSavings).toLocaleString()}</span>
+                )}
                 {item.paybackMonths != null && (
                   <span>Payback: {Number(item.paybackMonths).toFixed(1)} months</span>
                 )}
+                {item.recommendationScore != null && (
+                  <span>Score: {Number(item.recommendationScore).toFixed(1)}/100</span>
+                )}
+                {item.feasibilityScore != null && (
+                  <span>Feasibility: {Number(item.feasibilityScore).toFixed(0)}%</span>
+                )}
+              </div>
+              <div className="mt-3 flex gap-2">
                 <button
                   onClick={() => updateStatus(item.id, "accepted")}
-                  className="ml-auto rounded-full border border-primary px-3 py-1 font-medium text-primary hover:bg-primary hover:text-primary-foreground"
+                  className="flex-1 rounded-full border border-primary px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary hover:text-primary-foreground"
                 >
                   Accept
                 </button>
                 <button
                   onClick={() => updateStatus(item.id, "rejected")}
-                  className="rounded-full border border-border px-3 py-1 font-medium text-secondary hover:bg-mist"
+                  className="flex-1 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-secondary hover:bg-mist"
                 >
                   Dismiss
                 </button>

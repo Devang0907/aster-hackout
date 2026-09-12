@@ -1,7 +1,7 @@
+import json
 from typing import Any
 from uuid import UUID
 
-from app.repositories.helpers import to_prisma_data
 from app.schemas.simulation import SimulationCreate
 from app.schemas.user import UserContext
 from app.services.authorization import assert_factory_operational_access
@@ -20,8 +20,24 @@ async def create_simulation(
     )
     if base_result is None:
         raise NotFoundError("base carbon result not found")
-    data = to_prisma_data(payload.model_dump(exclude_none=True))
-    data.update({"factoryId": str(factory_id), "createdById": str(user.id)})
+    # Manually construct data with correct field names for Prisma
+    data = {
+        "baseResultId": str(payload.baseResultId),
+        "name": payload.name,
+        "assumptions": json.dumps(payload.assumptions),
+        "baselineCo2e": payload.baselineCo2e,
+        "resultingCo2e": payload.resultingCo2e,
+        "co2Reduction": payload.co2Reduction,
+        "co2ReductionPercentage": payload.co2ReductionPercentage,
+        "factoryId": str(factory_id),
+        "createdById": str(user.id),
+    }
+    if payload.estimatedCost is not None:
+        data["estimatedCost"] = payload.estimatedCost
+    if payload.estimatedSavings is not None:
+        data["estimatedSavings"] = payload.estimatedSavings
+    if payload.paybackMonths is not None:
+        data["paybackMonths"] = payload.paybackMonths
     async with database.tx() as transaction:
         simulation = await transaction.simulation.create(data=data)
         await transaction.auditlog.create(

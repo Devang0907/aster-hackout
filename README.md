@@ -1,9 +1,27 @@
+<p align="center">
+  <img src="frontend/public/logo.png" alt="CarbonLoop Logo" width="150"/>
+</p>
+
+<h1 align="center">CarbonLoop</h1>
+
+<h3 align="center">Industrial Emission Leak-Point Detector & Circular Alternative Recommender</h3>
+
+<p align="center">
+  A FastAPI + PostgreSQL + Prisma Client Python backend for factory-scoped emissions data,
+  leak-point results, circular interventions, recommendations, and what-if simulations.
+</p>
+
+<p align="center">
+  <a href="https://github.com/Devang0907/aster-hackout">
+    <img alt="GitHub stars" src="https://img.shields.io/github/stars/Devang0907/aster-hackout?style=for-the-badge">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Devang0907/aster-hackout">GitHub</a>
+</p>
+
 ![CarbonLoop Landing Page](frontend/public/image.png)
-
-# Industrial Emission Leak-Point Detector Backend
-
-FastAPI + PostgreSQL + Prisma Client Python backend for factory-scoped emissions data,
-leak-point results, circular interventions, recommendations, and what-if simulations.
 
 ## Important runtime note
 
@@ -115,26 +133,35 @@ python -m prisma migrate deploy --schema prisma/schema.prisma
 python prisma/seed.py
 ```
 
-To add the removable demo tenant for API and frontend verification:
+To seed and calculate the supplied CarbonWise industrial dataset in one command:
 
 ```powershell
 python prisma/seed.py --demo-tenant
 ```
 
-The demo users use these fixed IDs so local development authentication can reference them:
+This idempotently creates or links the owner, stores the factory, 2026 reporting period and its
+industrial activity, runs the supplied Random Forest recommendation engine, and persists the
+carbon result, five emission sources, and three recommendations. The development-only default
+sign-in is `carbonwise-demo@example.com` / `CarbonWiseDemo@2026`.
 
-- Admin: `00000000-0000-0000-0000-000000000001`
-- Factory owner: `00000000-0000-0000-0000-000000000002`
-- Factory manager: `00000000-0000-0000-0000-000000000003`
-
-Remove only the demo tenant later with:
+To link the dataset to an existing factory-owner account without changing its password:
 
 ```powershell
-python prisma/seed.py --cleanup-demo
+python prisma/seed.py --demo-tenant --user-email owner@example.com
 ```
 
-This cleanup does not remove the reference materials, alternatives, interventions, or demo
-emission factors.
+For a non-default password, set `CARBONWISE_DEMO_PASSWORD` in the process environment. Existing
+credentials are only changed when `--reset-existing-password` is explicitly supplied. Demo output
+is immutable history and intentionally has no cleanup command.
+
+Expected stored output:
+
+- net emissions: `383000 kgCO2e` (`383.00 t CO₂e` in the dashboard);
+- carbon intensity: `38.3 kgCO2e/unit`;
+- transport/material/electricity/waste/fuel: `255000 / 92500 / 35000 / 500 / 0 kgCO2e`;
+- model recommendations: electric transport, transport optimization, and recycled material use.
+
+These values are synthetic test data, not official factors or regulatory output.
 
 For later schema changes in development:
 
@@ -206,13 +233,13 @@ keys/claims while keeping its UUID subject synchronized to `users.id`.
 - `/api/v1/factories/{factoryId}/simulations`: JSON-assumption what-if scenarios
 - `/api/v1/catalogs/{materials|material-alternatives|interventions|emission-factors}`: authenticated read-only catalogs
 
-The frontend-facing API currently contains 23 route paths. Calculation and ML persistence is
-available through internal services in `app/services/calculations.py`; it is intentionally not
-exposed as a public owner/manager endpoint.
+Submitting a reporting period synchronously runs the calculation and recommendation pipeline. The
+result is persisted before the response returns and becomes available through the carbon-result,
+recommendation, leak-point, and dashboard-summary endpoints.
 
 ## Data model: all 18 models
 
-1. **User** — external-auth-compatible UUID identity, role, contact/basic status; no password.
+1. **User** — UUID identity, PBKDF2 password hash, role, contact data, and active status.
 2. **Factory** — basic factory metadata, exactly one owner, and zero/one unique manager.
 3. **ReportingPeriod** — unique factory/date window with submission and processing lifecycle.
 4. **Material** — version-aware material master data and sustainability properties.
@@ -384,14 +411,14 @@ erDiagram
 
 ## Assumptions
 
-- Factory-owner identities are provisioned by an external identity/admin workflow; manager
-  provisioning here accepts that provider's UUID and never accepts or stores a password.
+- Factory owners can register with password-based authentication; manager provisioning accepts an
+  existing manager identity and does not expose credential data through metadata endpoints.
 - Operational data is mutable only while its reporting period is `draft`; submitting locks entry.
 - An emission-factor correction is a new version, and a recalculation uses a new
   `calculationVersion`. Duplicate result versions for one period are rejected.
 - `costDifferencePercentage` is constrained to `0..100` exactly as requested, even though some
   domains represent cost decreases as negative values.
-- Decimal units are stored with each activity. Unit conversion and the actual carbon/ML pipeline
-  are separate domain components and are not fabricated by this database/API foundation.
+- Calculation/model values are stored in `kgCO2e`; the frontend converts them to metric tonnes for
+  display. The pipeline records its calculation and model versions on immutable output.
 - Seed emission factors are conspicuously demo-only and carry 100% uncertainty. Replace them with
   sourced, reviewed, versioned factors before real calculations.

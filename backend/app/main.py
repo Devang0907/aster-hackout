@@ -9,6 +9,7 @@ from app.api.routes import (
     admin,
     auth,
     catalogs,
+    chat,
     factories,
     health,
     insights,
@@ -39,17 +40,13 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Debug CORS configuration
-    print(f"CORS_ORIGINS from env: {settings.cors_origins}")
-    print(f"CORS origin list: {settings.cors_origin_list}")
-
     application.add_middleware(
         CORSMiddleware,
-        allow_origin_regex=r".*",
-        allow_credentials=False,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
+        allow_origins=settings.cors_origin_list,
+        allow_origin_regex=settings.cors_origin_regex_value,
+        allow_credentials=True,
+        allow_methods=["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"],
+        allow_headers=["Authorization", "Content-Type", "X-User-Id"],
         max_age=600,
     )
 
@@ -65,6 +62,7 @@ def create_app() -> FastAPI:
     application.include_router(reporting.router, prefix="/api/v1")
     application.include_router(operational.router, prefix="/api/v1")
     application.include_router(insights.router, prefix="/api/v1")
+    application.include_router(chat.router, prefix="/api/v1")
     return application
 
 

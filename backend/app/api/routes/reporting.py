@@ -36,6 +36,18 @@ async def create_period(
         ) from exc
 
 
+@router.delete("/{period_id}", status_code=204)
+async def delete_period(
+    factory_id: UUID,
+    period_id: UUID,
+    current_user: FactoryOperator,
+    database: Database,
+) -> None:
+    await service.delete_reporting_period(
+        factory_id, period_id, current_user, database
+    )
+
+
 @router.post("/{period_id}/submit")
 async def submit_period(
     factory_id: UUID,

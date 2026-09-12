@@ -1,20 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { get, post } from "@/lib/api";
+import { DecimalValue, formatKgCo2eAsTonnes } from "@/lib/emissions";
 import { FactoryPageShell } from "@/components/dashboard/FactoryPageShell";
 
 export const Route = createFileRoute("/dashboard/simulations")({ component: Simulations });
 
 interface CarbonResult {
   id: string;
-  netCo2e: number;
-  totalCo2e: number;
+  netCo2e: DecimalValue;
+  totalCo2e: DecimalValue;
 }
 interface Simulation {
   id: string;
   name: string;
-  baselineCo2e: number;
-  resultingCo2e: number;
+  baselineCo2e: DecimalValue;
+  resultingCo2e: DecimalValue;
   co2ReductionPercentage: number;
   estimatedCost?: number;
   estimatedSavings?: number;
@@ -164,7 +165,7 @@ function SimulationContent({ factoryId }: { factoryId: string }) {
                 <p className="font-medium text-primary">{item.name}</p>
                 <p className="mt-2 text-sm text-secondary">
                   {Number(item.co2ReductionPercentage).toFixed(1)}% reduction ·{" "}
-                  {Number(item.resultingCo2e).toFixed(2)} t CO2e remaining
+                  {formatKgCo2eAsTonnes(item.resultingCo2e)} remaining
                 </p>
                 {item.estimatedSavings != null && (
                   <p className="mt-1 text-xs text-muted-foreground">

@@ -11,8 +11,13 @@ async def list_recommendations(
     factory_id: UUID, user: UserContext, database: Any
 ) -> list[Any]:
     await assert_factory_operational_access(user, factory_id, database)
-    return await database.recommendation.find_many(
-        where={"factoryId": str(factory_id)},
+    latest_result = await database.carbonresult.find_first(
+        where={"factoryId": str(factory_id)}, order={"calculatedAt": "desc"}
+    )
+    if latest_result is None:
+        return []
+    recommendations = await database.recommendation.find_many(
+        where={"factoryId": str(factory_id), "resultId": latest_result.id},
         include={
             "intervention": True,
             "material": True,
@@ -21,6 +26,11 @@ async def list_recommendations(
         },
         order={"priority": "asc"},
     )
+    return [
+        item
+        for item in recommendations
+        if str(getattr(item.status, "value", item.status)) != "rejected"
+    ]
 
 
 async def update_recommendation_status(

@@ -1,19 +1,36 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, useRef } from "react";
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
+import { Building2, ChevronDown } from "lucide-react";
 import { logout, getUser } from "@/lib/auth";
 import { get } from "@/lib/api";
 import { getSelectedFactoryId, setSelectedFactoryId } from "@/lib/factory";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 
 interface DashboardLayoutProps {
   children?: ReactNode;
   title?: string;
+  showAddFactoryButton?: boolean;
+  onAddFactory?: () => void;
 }
 
-export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayoutProps) {
+export function DashboardLayout({ children, title = "Dashboard", showAddFactoryButton = true, onAddFactory }: DashboardLayoutProps) {
   const user = getUser();
   const navigate = useNavigate();
   const [factories, setFactories] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedFactoryId, setSelectedFactoryIdState] = useState<string | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     get("/api/v1/factories")
@@ -133,23 +150,48 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
             <h2 className="text-lg font-semibold text-primary">{title}</h2>
             <div className="flex items-center gap-3">
               {factories.length > 0 && (
-                <select
-                  aria-label="Select factory"
-                  value={selectedFactoryId || factories[0].id}
-                  onChange={(event) => handleFactoryChange(event.target.value)}
-                  className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-secondary"
-                >
-                  {factories.map((factory) => (
-                    <option key={factory.id} value={factory.id}>
-                      {factory.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative" ref={dropdownRef}>
+                  <button
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    className="flex items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-primary hover:bg-mist transition-colors"
+                  >
+                    <Building2 className="h-4 w-4" />
+                    <span className="max-w-[200px] truncate">
+                      {factories.find((f) => f.id === selectedFactoryId)?.name || factories[0]?.name}
+                    </span>
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                  {isDropdownOpen && (
+                    <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-lg border border-border bg-surface shadow-lg">
+                      <div className="p-2">
+                        {factories.map((factory) => (
+                          <button
+                            key={factory.id}
+                            onClick={() => {
+                              handleFactoryChange(factory.id);
+                              setIsDropdownOpen(false);
+                            }}
+                            className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                              factory.id === selectedFactoryId
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "text-secondary hover:bg-mist"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                              <span className="truncate">{factory.name}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
-              {user?.role === "factory_owner" && (
+              {showAddFactoryButton && user?.role === "factory_owner" && (
                 <button
                   type="button"
-                  onClick={() => navigate({ to: "/dashboard/settings" })}
+                  onClick={onAddFactory || (() => navigate({ to: "/dashboard/settings" }))}
                   className="rounded-full border border-border px-3 py-2 text-xs font-semibold uppercase tracking-[0.1em] text-secondary hover:bg-mist"
                 >
                   Add factory
@@ -162,6 +204,9 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
         {/* Page Content */}
         <main className="p-6">{children || <Outlet />}</main>
       </div>
+
+      {/* Chat Widget */}
+      <ChatWidget />
     </div>
   );
 }

@@ -39,3 +39,8 @@ async def set_factory_active(
     active: bool = Query(...),
 ) -> Any:
     return await service.set_factory_active(current_user, factory_id, active, database)
+
+
+@router.get("/statistics")
+async def statistics(current_user: AdminUser, database: Database) -> dict[str, int]:
+    return await service.get_statistics(current_user, database)
