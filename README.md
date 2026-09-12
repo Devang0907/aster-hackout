@@ -1,9 +1,27 @@
+<p align="center">
+  <img src="frontend/public/favicon.ico" alt="CarbonLoop Logo" width="150"/>
+</p>
+
+<h1 align="center">CarbonLoop</h1>
+
+<h3 align="center">Industrial Emission Leak-Point Detector & Circular Alternative Recommender</h3>
+
+<p align="center">
+  A FastAPI + PostgreSQL + Prisma Client Python backend for factory-scoped emissions data,
+  leak-point results, circular interventions, recommendations, and what-if simulations.
+</p>
+
+<p align="center">
+  <a href="https://github.com/Devang0907/aster-hackout">
+    <img alt="GitHub stars" src="https://img.shields.io/github/stars/Devang0907/aster-hackout?style=for-the-badge">
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Devang0907/aster-hackout">GitHub</a>
+</p>
+
 ![CarbonLoop Landing Page](frontend/public/image.png)
-
-# Industrial Emission Leak-Point Detector Backend
-
-FastAPI + PostgreSQL + Prisma Client Python backend for factory-scoped emissions data,
-leak-point results, circular interventions, recommendations, and what-if simulations.
 
 ## Important runtime note
 
