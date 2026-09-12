@@ -22,6 +22,7 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [analysisVersion, setAnalysisVersion] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const loadFactory = async () => {
     try {
@@ -29,7 +30,9 @@ function Dashboard() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || "Unable to load factory");
       const selectedId = getSelectedFactoryId();
-      setFactory(data.find((item: FactoryProfile) => item.id === selectedId) || data[0] || null);
+      const selectedFactory = data.find((item: FactoryProfile) => item.id === selectedId) || data[0] || null;
+      setFactory(selectedFactory);
+      setShowOnboarding(!selectedFactory);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load factory");
     } finally {
@@ -49,15 +52,15 @@ function Dashboard() {
       {pathname !== "/dashboard" ? (
         <Outlet />
       ) : (
-        <DashboardLayout>
+        <DashboardLayout showAddFactoryButton={!!factory} onAddFactory={() => setShowOnboarding(true)}>
           {loading ? (
             <div className="h-56 animate-pulse rounded-2xl bg-mist" />
           ) : error ? (
             <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
               {error}
             </div>
-          ) : !factory ? (
-            <FactoryOnboarding onCreated={(created) => setFactory(created)} />
+          ) : showOnboarding || !factory ? (
+            <FactoryOnboarding onCreated={(created) => { setFactory(created); setShowOnboarding(false); }} />
           ) : (
             <div className="space-y-6">
               <FactoryProfileForm factory={factory} onUpdated={setFactory} />

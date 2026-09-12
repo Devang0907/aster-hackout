@@ -117,15 +117,17 @@ export function RecommendationList({ factoryId, onStatusChanged }: Recommendatio
                 {item.feasibilityScore != null && (
                   <span>Feasibility: {Number(item.feasibilityScore).toFixed(0)}%</span>
                 )}
+              </div>
+              <div className="mt-3 flex gap-2">
                 <button
                   onClick={() => updateStatus(item.id, "accepted")}
-                  className="ml-auto rounded-full border border-primary px-3 py-1 font-medium text-primary hover:bg-primary hover:text-primary-foreground"
+                  className="flex-1 rounded-full border border-primary px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary hover:text-primary-foreground"
                 >
                   Accept
                 </button>
                 <button
                   onClick={() => updateStatus(item.id, "rejected")}
-                  className="rounded-full border border-border px-3 py-1 font-medium text-secondary hover:bg-mist"
+                  className="flex-1 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-secondary hover:bg-mist"
                 >
                   Dismiss
                 </button>
