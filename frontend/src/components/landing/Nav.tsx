@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "./Logo";
 import { isAuthenticated, getUser, logout } from "@/lib/auth";
-import { get } from "@/lib/api";
 
 const links = [
   { label: "Product", href: "#product" },
@@ -17,9 +16,6 @@ export function Nav() {
   const [open, setOpen] = useState(false);
   const [authenticated, setAuthenticated] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [factories, setFactories] = useState<any[]>([]);
-  const [selectedFactory, setSelectedFactory] = useState<any>(null);
-  const [factoryDropdownOpen, setFactoryDropdownOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -33,22 +29,8 @@ export function Nav() {
     setAuthenticated(authStatus);
     if (authStatus) {
       setUser(getUser());
-      fetchFactories();
     }
   }, []);
-
-  const fetchFactories = async () => {
-    try {
-      const response = await get("/api/v1/factories");
-      const data = await response.json();
-      setFactories(data);
-      if (data.length > 0) {
-        setSelectedFactory(data[0]);
-      }
-    } catch (error) {
-      console.error("Failed to fetch factories:", error);
-    }
-  };
 
   const handleLogout = () => {
     logout();
@@ -88,34 +70,6 @@ export function Nav() {
         <div className="hidden items-center justify-end gap-2.5 lg:flex">
           {authenticated ? (
             <>
-              {/* Factory Selector */}
-              {factories.length > 0 && (
-                <div className="relative">
-                  <button
-                    onClick={() => setFactoryDropdownOpen(!factoryDropdownOpen)}
-                    className="flex items-center gap-2 rounded-full border border-border bg-surface px-4 py-2.5 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-primary transition-colors hover:bg-mist"
-                  >
-                    {selectedFactory?.name || "Select Factory"}
-                    <ChevronDown className="h-4 w-4" />
-                  </button>
-                  {factoryDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 rounded-lg border border-border bg-surface shadow-float">
-                      {factories.map((factory) => (
-                        <button
-                          key={factory.id}
-                          onClick={() => {
-                            setSelectedFactory(factory);
-                            setFactoryDropdownOpen(false);
-                          }}
-                          className="block w-full px-4 py-2 text-left text-sm text-secondary hover:bg-mist hover:text-primary"
-                        >
-                          {factory.name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
               <a
                 href="/dashboard"
                 className="rounded-full bg-primary px-5 py-2.5 text-[0.6875rem] font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90"

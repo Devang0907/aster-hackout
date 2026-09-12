@@ -10,16 +10,27 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SigninRouteImport } from './routes/signin'
 import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
+import { Route as DashboardEmissionsRouteImport } from './routes/dashboard.emissions'
+import { Route as DashboardLeakPointsRouteImport } from './routes/dashboard.leak-points'
+import { Route as DashboardRecommendationsRouteImport } from './routes/dashboard.recommendations'
+import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
+import { Route as DashboardSimulationsRouteImport } from './routes/dashboard.simulations'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -52,68 +63,131 @@ const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
   path: '/terms-of-service',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DashboardEmissionsRoute = DashboardEmissionsRouteImport.update({
+  id: '/emissions',
+  path: '/emissions',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLeakPointsRoute = DashboardLeakPointsRouteImport.update({
+  id: '/leak-points',
+  path: '/leak-points',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardRecommendationsRoute =
+  DashboardRecommendationsRouteImport.update({
+    id: '/recommendations',
+    path: '/recommendations',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardSimulationsRoute = DashboardSimulationsRouteImport.update({
+  id: '/simulations',
+  path: '/simulations',
+  getParentRoute: () => DashboardRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/admin': typeof AdminRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/dashboard/emissions': typeof DashboardEmissionsRoute
+  '/dashboard/leak-points': typeof DashboardLeakPointsRoute
+  '/dashboard/recommendations': typeof DashboardRecommendationsRoute
+  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/simulations': typeof DashboardSimulationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/admin': typeof AdminRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/dashboard/emissions': typeof DashboardEmissionsRoute
+  '/dashboard/leak-points': typeof DashboardLeakPointsRoute
+  '/dashboard/recommendations': typeof DashboardRecommendationsRoute
+  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/simulations': typeof DashboardSimulationsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/dashboard': typeof DashboardRoute
+  '/admin': typeof AdminRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/privacy-policy': typeof PrivacyPolicyRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
   '/terms-of-service': typeof TermsOfServiceRoute
+  '/dashboard/emissions': typeof DashboardEmissionsRoute
+  '/dashboard/leak-points': typeof DashboardLeakPointsRoute
+  '/dashboard/recommendations': typeof DashboardRecommendationsRoute
+  '/dashboard/settings': typeof DashboardSettingsRoute
+  '/dashboard/simulations': typeof DashboardSimulationsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/dashboard'
     | '/privacy-policy'
     | '/register'
     | '/reset-password'
     | '/signin'
     | '/terms-of-service'
+    | '/dashboard/emissions'
+    | '/dashboard/leak-points'
+    | '/dashboard/recommendations'
+    | '/dashboard/settings'
+    | '/dashboard/simulations'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin'
     | '/dashboard'
     | '/privacy-policy'
     | '/register'
     | '/reset-password'
     | '/signin'
     | '/terms-of-service'
+    | '/dashboard/emissions'
+    | '/dashboard/leak-points'
+    | '/dashboard/recommendations'
+    | '/dashboard/settings'
+    | '/dashboard/simulations'
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/dashboard'
     | '/privacy-policy'
     | '/register'
     | '/reset-password'
     | '/signin'
     | '/terms-of-service'
+    | '/dashboard/emissions'
+    | '/dashboard/leak-points'
+    | '/dashboard/recommendations'
+    | '/dashboard/settings'
+    | '/dashboard/simulations'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  DashboardRoute: typeof DashboardRoute
+  AdminRoute: typeof AdminRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
   PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -128,6 +202,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -172,12 +253,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsOfServiceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dashboard/emissions': {
+      id: '/dashboard/emissions'
+      path: '/emissions'
+      fullPath: '/dashboard/emissions'
+      preLoaderRoute: typeof DashboardEmissionsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/leak-points': {
+      id: '/dashboard/leak-points'
+      path: '/leak-points'
+      fullPath: '/dashboard/leak-points'
+      preLoaderRoute: typeof DashboardLeakPointsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/recommendations': {
+      id: '/dashboard/recommendations'
+      path: '/recommendations'
+      fullPath: '/dashboard/recommendations'
+      preLoaderRoute: typeof DashboardRecommendationsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/settings': {
+      id: '/dashboard/settings'
+      path: '/settings'
+      fullPath: '/dashboard/settings'
+      preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/simulations': {
+      id: '/dashboard/simulations'
+      path: '/simulations'
+      fullPath: '/dashboard/simulations'
+      preLoaderRoute: typeof DashboardSimulationsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
   }
 }
 
+interface DashboardRouteChildren {
+  DashboardEmissionsRoute: typeof DashboardEmissionsRoute
+  DashboardLeakPointsRoute: typeof DashboardLeakPointsRoute
+  DashboardRecommendationsRoute: typeof DashboardRecommendationsRoute
+  DashboardSettingsRoute: typeof DashboardSettingsRoute
+  DashboardSimulationsRoute: typeof DashboardSimulationsRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardEmissionsRoute: DashboardEmissionsRoute,
+  DashboardLeakPointsRoute: DashboardLeakPointsRoute,
+  DashboardRecommendationsRoute: DashboardRecommendationsRoute,
+  DashboardSettingsRoute: DashboardSettingsRoute,
+  DashboardSimulationsRoute: DashboardSimulationsRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  DashboardRoute: DashboardRoute,
+  AdminRoute: AdminRoute,
+  DashboardRoute: DashboardRouteWithChildren,
   PrivacyPolicyRoute: PrivacyPolicyRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,

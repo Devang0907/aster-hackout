@@ -1,5 +1,4 @@
 import asyncio
-import base64
 import hashlib
 import hmac
 import secrets
@@ -18,6 +17,7 @@ from app.core.config import Settings, get_settings
 from app.core.database import get_database
 from app.schemas.user import UserContext, UserRole
 from app.security.authentication import get_current_user
+from app.security.passwords import hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 Database = Annotated[Any, Depends(get_database)]
@@ -33,7 +33,6 @@ class RegisterRequest(BaseModel):
     fullName: str
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
-    role: UserRole = UserRole.factory_owner
     emailVerificationToken: str
 
 
@@ -70,38 +69,6 @@ class EmailOtpResponse(BaseModel):
 
 class EmailVerificationResponse(BaseModel):
     emailVerificationToken: str
-
-
-PASSWORD_HASH_ITERATIONS = 600_000
-
-
-def _hash_password(password: str) -> str:
-    salt = secrets.token_bytes(16)
-    digest = hashlib.pbkdf2_hmac(
-        "sha256", password.encode("utf-8"), salt, PASSWORD_HASH_ITERATIONS
-    )
-    return "pbkdf2_sha256${}${}${}".format(
-        PASSWORD_HASH_ITERATIONS,
-        base64.urlsafe_b64encode(salt).decode("ascii"),
-        base64.urlsafe_b64encode(digest).decode("ascii"),
-    )
-
-
-def _verify_password(password: str, encoded_hash: str | None) -> bool:
-    if not encoded_hash:
-        return False
-    try:
-        algorithm, iterations, encoded_salt, encoded_digest = encoded_hash.split("$", 3)
-        if algorithm != "pbkdf2_sha256":
-            return False
-        salt = base64.urlsafe_b64decode(encoded_salt.encode("ascii"))
-        expected_digest = base64.urlsafe_b64decode(encoded_digest.encode("ascii"))
-        actual_digest = hashlib.pbkdf2_hmac(
-            "sha256", password.encode("utf-8"), salt, int(iterations)
-        )
-    except (ValueError, TypeError):
-        return False
-    return hmac.compare_digest(actual_digest, expected_digest)
 
 
 def _otp_hash(email: str, code: str, settings: Settings) -> str:
@@ -252,7 +219,7 @@ async def confirm_password_reset(
 
     await database.user.update(
         where={"id": str(user.id)},
-        data={"passwordHash": _hash_password(payload.newPassword)},
+        data={"passwordHash": hash_password(payload.newPassword)},
     )
     return {"message": "Password reset successfully"}
 
@@ -311,7 +278,7 @@ async def signin(
             detail="Invalid credentials",
         )
     
-    if not _verify_password(payload.password, user.passwordHash):
+    if not verify_password(payload.password, user.passwordHash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials",
@@ -378,8 +345,8 @@ async def register(
             "id": str(user_id),
             "fullName": payload.fullName,
             "email": payload.email.lower(),
-            "passwordHash": _hash_password(payload.password),
-            "role": str(payload.role),
+            "passwordHash": hash_password(payload.password),
+            "role": UserRole.factory_owner.value,
             "isActive": True,
         }
     )
