@@ -12,9 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as PrivacyPolicyRouteImport } from './routes/privacy-policy'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SigninRouteImport } from './routes/signin'
+import { Route as TermsOfServiceRouteImport } from './routes/terms-of-service'
 import { Route as DashboardEmissionsRouteImport } from './routes/dashboard.emissions'
 import { Route as DashboardLeakPointsRouteImport } from './routes/dashboard.leak-points'
 import { Route as DashboardRecommendationsRouteImport } from './routes/dashboard.recommendations'
@@ -36,6 +38,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyPolicyRoute = PrivacyPolicyRouteImport.update({
+  id: '/privacy-policy',
+  path: '/privacy-policy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -49,6 +56,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const SigninRoute = SigninRouteImport.update({
   id: '/signin',
   path: '/signin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsOfServiceRoute = TermsOfServiceRouteImport.update({
+  id: '/terms-of-service',
+  path: '/terms-of-service',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardEmissionsRoute = DashboardEmissionsRouteImport.update({
@@ -82,9 +94,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/dashboard/emissions': typeof DashboardEmissionsRoute
   '/dashboard/leak-points': typeof DashboardLeakPointsRoute
   '/dashboard/recommendations': typeof DashboardRecommendationsRoute
@@ -95,9 +109,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/dashboard/emissions': typeof DashboardEmissionsRoute
   '/dashboard/leak-points': typeof DashboardLeakPointsRoute
   '/dashboard/recommendations': typeof DashboardRecommendationsRoute
@@ -109,9 +125,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRouteWithChildren
+  '/privacy-policy': typeof PrivacyPolicyRoute
   '/register': typeof RegisterRoute
   '/reset-password': typeof ResetPasswordRoute
   '/signin': typeof SigninRoute
+  '/terms-of-service': typeof TermsOfServiceRoute
   '/dashboard/emissions': typeof DashboardEmissionsRoute
   '/dashboard/leak-points': typeof DashboardLeakPointsRoute
   '/dashboard/recommendations': typeof DashboardRecommendationsRoute
@@ -124,9 +142,11 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/dashboard'
+    | '/privacy-policy'
     | '/register'
     | '/reset-password'
     | '/signin'
+    | '/terms-of-service'
     | '/dashboard/emissions'
     | '/dashboard/leak-points'
     | '/dashboard/recommendations'
@@ -137,9 +157,11 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/dashboard'
+    | '/privacy-policy'
     | '/register'
     | '/reset-password'
     | '/signin'
+    | '/terms-of-service'
     | '/dashboard/emissions'
     | '/dashboard/leak-points'
     | '/dashboard/recommendations'
@@ -150,9 +172,11 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/dashboard'
+    | '/privacy-policy'
     | '/register'
     | '/reset-password'
     | '/signin'
+    | '/terms-of-service'
     | '/dashboard/emissions'
     | '/dashboard/leak-points'
     | '/dashboard/recommendations'
@@ -164,9 +188,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   DashboardRoute: typeof DashboardRouteWithChildren
+  PrivacyPolicyRoute: typeof PrivacyPolicyRoute
   RegisterRoute: typeof RegisterRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SigninRoute: typeof SigninRoute
+  TermsOfServiceRoute: typeof TermsOfServiceRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy-policy': {
+      id: '/privacy-policy'
+      path: '/privacy-policy'
+      fullPath: '/privacy-policy'
+      preLoaderRoute: typeof PrivacyPolicyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -211,6 +244,13 @@ declare module '@tanstack/react-router' {
       path: '/signin'
       fullPath: '/signin'
       preLoaderRoute: typeof SigninRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms-of-service': {
+      id: '/terms-of-service'
+      path: '/terms-of-service'
+      fullPath: '/terms-of-service'
+      preLoaderRoute: typeof TermsOfServiceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard/emissions': {
@@ -275,9 +315,11 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   DashboardRoute: DashboardRouteWithChildren,
+  PrivacyPolicyRoute: PrivacyPolicyRoute,
   RegisterRoute: RegisterRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SigninRoute: SigninRoute,
+  TermsOfServiceRoute: TermsOfServiceRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

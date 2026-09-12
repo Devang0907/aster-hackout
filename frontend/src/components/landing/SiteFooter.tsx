@@ -11,7 +11,7 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border/60 bg-gradient-to-b from-mist/30 to-background">
       <div className="mx-auto max-w-[1400px] px-5 py-20 sm:px-8 lg:px-14">
-        <div className="grid gap-12 lg:grid-cols-[1fr_1fr_1fr]">
+        <div className="grid gap-12 lg:grid-cols-[1fr_1fr_1fr_1fr]">
           <div className="space-y-6">
             <Logo />
             <p className="max-w-[28rem] text-sm leading-relaxed text-muted-foreground">
@@ -34,6 +34,29 @@ export function SiteFooter() {
                   </a>
                 </li>
               ))}
+            </ul>
+          </div>
+          <div>
+            <p className="text-[0.5625rem] font-semibold uppercase tracking-[0.2em] text-secondary">
+              Legal
+            </p>
+            <ul className="mt-6 space-y-4">
+              <li>
+                <a
+                  href="/privacy-policy"
+                  className="text-sm text-muted-foreground transition-colors hover:text-primary hover:underline decoration-1 underline-offset-4"
+                >
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/terms-of-service"
+                  className="text-sm text-muted-foreground transition-colors hover:text-primary hover:underline decoration-1 underline-offset-4"
+                >
+                  Terms of Service
+                </a>
+              </li>
             </ul>
           </div>
           <div className="space-y-6">
@@ -60,18 +83,10 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="mt-16 flex flex-col gap-4 border-t border-border/40 pt-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-16 border-t border-border/40 pt-8">
           <p className="text-xs text-muted-foreground">
             © {new Date().getFullYear()} CarbonLoop. All rights reserved.
           </p>
-          <div className="flex gap-6 text-xs text-muted-foreground">
-            <a href="#top" className="transition-colors hover:text-primary">
-              Privacy Policy
-            </a>
-            <a href="#top" className="transition-colors hover:text-primary">
-              Terms of Service
-            </a>
-          </div>
         </div>
       </div>
     </footer>
