@@ -18,12 +18,17 @@ DELEGATES: dict[OperationalKind, tuple[str, str]] = {
 }
 
 
-async def _assert_period(factory_id: UUID, period_id: UUID, database: Any) -> None:
+async def _get_period(factory_id: UUID, period_id: UUID, database: Any) -> Any:
     period = await database.reportingperiod.find_first(
         where={"id": str(period_id), "factoryId": str(factory_id)}
     )
     if period is None:
         raise NotFoundError("reporting period not found")
+    return period
+
+
+async def _assert_period_editable(factory_id: UUID, period_id: UUID, database: Any) -> None:
+    period = await _get_period(factory_id, period_id, database)
     status = str(getattr(period.status, "value", period.status))
     if status != "draft":
         raise ConflictError("operational data can only be changed while the period is draft")
@@ -38,7 +43,7 @@ async def create_operational_record(
 ) -> Any:
     await assert_factory_operational_access(user, factory_id, database)
     period_id = payload.reportingPeriodId
-    await _assert_period(factory_id, period_id, database)
+    await _assert_period_editable(factory_id, period_id, database)
     if kind == "material":
         material = await database.material.find_first(
             where={"id": str(payload.materialId), "isActive": True}
@@ -71,7 +76,7 @@ async def list_operational_records(
 ) -> list[Any]:
     await assert_factory_operational_access(user, factory_id, database)
     if reporting_period_id is not None:
-        await _assert_period(factory_id, reporting_period_id, database)
+        await _get_period(factory_id, reporting_period_id, database)
     delegate_name, _ = DELEGATES[kind]
     where: dict[str, Any] = {"factoryId": str(factory_id)}
     if reporting_period_id:

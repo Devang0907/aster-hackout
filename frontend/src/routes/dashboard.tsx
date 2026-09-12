@@ -9,6 +9,7 @@ import { EmissionsAnalysisForm } from "@/components/dashboard/EmissionsAnalysisF
 import { RecommendationList } from "@/components/dashboard/RecommendationList";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { LatestEmissionBreakdown } from "@/components/dashboard/LatestEmissionBreakdown";
 import { getSelectedFactoryId } from "@/lib/factory";
 
 export const Route = createFileRoute("/dashboard")({
@@ -61,6 +62,10 @@ function Dashboard() {
             <div className="space-y-6">
               <FactoryProfileForm factory={factory} onUpdated={setFactory} />
               <SummaryCards key={`summary-${analysisVersion}`} factoryId={factory.id} />
+              <LatestEmissionBreakdown
+                key={`breakdown-${analysisVersion}`}
+                factoryId={factory.id}
+              />
               <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
                 <EmissionsAnalysisForm
                   factoryId={factory.id}
@@ -69,6 +74,7 @@ function Dashboard() {
                 <RecommendationList
                   key={`recommendations-${analysisVersion}`}
                   factoryId={factory.id}
+                  onStatusChanged={() => setAnalysisVersion((version) => version + 1)}
                 />
               </div>
               <RecentActivity key={`activity-${analysisVersion}`} factoryId={factory.id} />

@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     smtp_password: SecretStr | None = None
     smtp_from_email: str | None = None
     email_otp_expiry_seconds: int = 600
+    carbonwise_demo_password: SecretStr | None = None
     cors_origins: str = ""
     cors_origin_regex: str | None = None
 

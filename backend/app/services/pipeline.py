@@ -25,6 +25,15 @@ from recommendation_engine.services.recommendation_engine import (  # noqa: E402
 )
 
 ZERO = Decimal("0")
+CALCULATION_VERSION = "1.0"
+MODEL_VERSION = "fullbackend-random-forest-1.0"
+SOURCE_METADATA = {
+    "electricity": {"type": "energy", "name": "Electricity"},
+    "diesel": {"type": "fuel", "name": "Fuel"},
+    "raw_material": {"type": "material", "name": "Raw Material"},
+    "transport": {"type": "transport", "name": "Transport"},
+    "waste": {"type": "waste", "name": "Waste"},
+}
 SOURCE_ALIASES = {
     "solar installation": "renewable_electricity",
     "energy efficiency": "energy_efficiency",
@@ -44,27 +53,35 @@ def _decimal(value: Any) -> Decimal:
 
 def _factor_value(factors: list[Any], category: str, keywords: list[str]) -> Decimal:
     category = category.lower()
-    matching = [
+    category_factors = [
         factor
         for factor in factors
         if str(factor.category).lower() == category
-        and any(
-            keyword in str(factor.activity).lower()
-            for keyword in keywords
-            if keyword
-        )
+    ]
+    normalized_keywords = [keyword.strip().lower() for keyword in keywords if keyword.strip()]
+    exact = [
+        factor
+        for factor in category_factors
+        if str(factor.activity).strip().lower() in normalized_keywords
+    ]
+    if exact:
+        return _decimal(exact[0].factor)
+    matching = [
+        factor
+        for factor in category_factors
+        if any(keyword in str(factor.activity).lower() for keyword in normalized_keywords)
     ]
     if not matching:
-        matching = [factor for factor in factors if str(factor.category).lower() == category]
+        matching = category_factors
     return _decimal(matching[0].factor) if matching else ZERO
 
 
 def _severity(percentage: Decimal) -> str:
-    if percentage >= 40:
+    if percentage >= 50:
         return "critical"
-    if percentage >= 25:
+    if percentage >= 20:
         return "high"
-    if percentage >= 10:
+    if percentage >= 5:
         return "medium"
     return "low"
 
@@ -85,6 +102,7 @@ def _ranked_sources(emissions: dict[str, Decimal]) -> list[dict[str, Any]]:
 
 async def _load_period_data(factory_id: UUID, period_id: UUID, database: Any) -> dict[str, Any]:
     await _period(factory_id, period_id, database)
+    factory = await database.factory.find_unique(where={"id": str(factory_id)})
     filters = {"factoryId": str(factory_id), "reportingPeriodId": str(period_id)}
     material_usage = await database.factorymaterialusage.find_many(
         where=filters, include={"material": True}
@@ -95,6 +113,7 @@ async def _load_period_data(factory_id: UUID, period_id: UUID, database: Any) ->
     factors = await database.emissionfactor.find_many()
     interventions = await database.intervention.find_many()
     return {
+        "factory": factory,
         "material_usage": material_usage,
         "energy_usage": energy_usage,
         "waste_streams": waste_streams,
@@ -113,6 +132,9 @@ def _calculate_emissions(data: dict[str, Any]) -> tuple[dict[str, Decimal], Deci
         "waste": ZERO,
         "transport": ZERO,
     }
+    # The supplied CarbonWise calculation stores the reported renewable share but
+    # does not infer an offset from it. A defensible offset needs a separate,
+    # evidenced renewable-generation or contractual instrument calculation.
     renewable_offset = ZERO
 
     for record in data["energy_usage"]:
@@ -122,8 +144,6 @@ def _calculate_emissions(data: dict[str, Any]) -> tuple[dict[str, Decimal], Deci
         emission = _decimal(record.quantity) * factor
         target = "diesel" if category == "fuel" else "electricity"
         emissions[target] += emission
-        if target == "electricity":
-            renewable_offset += emission * _decimal(record.renewablePercentage) / 100
 
     for record in data["material_usage"]:
         material = record.material
@@ -137,12 +157,16 @@ def _calculate_emissions(data: dict[str, Any]) -> tuple[dict[str, Decimal], Deci
         factor = _factor_value(
             factors,
             "transport",
-            [str(record.mode).lower(), str(record.transportType).lower()],
+            [
+                f"{record.fuelType or ''} {record.transportType}".strip().lower(),
+                str(record.transportType).lower(),
+                str(record.mode).lower(),
+            ],
         )
         activity = (
             _decimal(record.distanceKm)
             * _decimal(record.weightTonnes)
-            * _decimal(record.trips or 1)
+            * _decimal(record.trips)
         )
         emissions["transport"] += activity * factor
 
@@ -152,7 +176,10 @@ def _calculate_emissions(data: dict[str, Any]) -> tuple[dict[str, Decimal], Deci
 def _engine_catalog(records: list[Any]) -> dict[str, dict[str, Any]]:
     catalog: dict[str, dict[str, Any]] = {}
     for record in records:
-        key = SOURCE_ALIASES.get(str(record.name).lower())
+        intervention_type = str(getattr(record, "interventionType", "") or "").lower()
+        key = intervention_type if intervention_type in INTERVENTIONS else None
+        if key is None:
+            key = SOURCE_ALIASES.get(str(record.name).lower())
         if key is None:
             continue
         template = dict(INTERVENTIONS[key])
@@ -177,13 +204,17 @@ def _engine_catalog(records: list[Any]) -> dict[str, dict[str, Any]]:
 
 
 def _carbon_payload(
-    factory_id: UUID,
+    factory: Any,
     period_id: UUID,
     run_id: UUID,
     emissions: dict[str, Decimal],
     renewable_offset: Decimal,
 ) -> CarbonResultCreate:
     total = sum(emissions.values(), ZERO)
+    net = max(ZERO, total - renewable_offset)
+    production_capacity = _decimal(getattr(factory, "productionCapacity", None))
+    carbon_intensity = net / production_capacity if production_capacity > ZERO else None
+    calculated_at = datetime.now(UTC)
     return CarbonResultCreate(
         reportingPeriodId=period_id,
         pipelineRunId=run_id,
@@ -194,9 +225,12 @@ def _carbon_payload(
         transportCo2e=emissions["transport"],
         wasteCo2e=emissions["waste"],
         renewableOffset=renewable_offset,
-        netCo2e=max(ZERO, total - renewable_offset),
-        calculationVersion=f"backend-v1-{datetime.now(UTC):%Y%m%d%H%M%S}",
-        calculatedAt=datetime.now(UTC),
+        netCo2e=net,
+        carbonIntensity=carbon_intensity,
+        carbonIntensityUnit="kgCO2e/unit" if carbon_intensity is not None else None,
+        calculationVersion=CALCULATION_VERSION,
+        mlModelVersion=MODEL_VERSION,
+        calculatedAt=calculated_at,
     )
 
 
@@ -213,6 +247,7 @@ async def run_reporting_period_pipeline(
         MlPipelineRunCreate(
             reportingPeriodId=period_id,
             pipelineVersion="backend-recommendation-v1",
+            modelVersion=MODEL_VERSION,
         ),
         database,
     )
@@ -231,28 +266,31 @@ async def run_reporting_period_pipeline(
             interventions=catalog,
         )
         result_payload = _carbon_payload(
-            factory_id, period_id, run.id, emissions, renewable_offset
+            data["factory"], period_id, run.id, emissions, renewable_offset
         )
         total = sum(emissions.values(), ZERO)
+        sorted_emissions = sorted(emissions.items(), key=lambda item: item[1], reverse=True)
         source_payloads = [
             EmissionSourceCreate(
                 resultId=uuid4(),
-                sourceType="calculated_category",
-                sourceName=source,
+                sourceType=SOURCE_METADATA[source]["type"],
+                sourceName=SOURCE_METADATA[source]["name"],
                 emissionsCo2e=amount,
                 percentage=(amount / total * 100) if total else ZERO,
                 severity=_severity((amount / total * 100) if total else ZERO),
                 rank=rank,
                 explanation=(
-                    "Calculated from reporting-period operational data and stored "
-                    "emission factors."
+                    f"{SOURCE_METADATA[source]['name']} contributes {amount:.2f} kgCO2e, "
+                    f"which is {((amount / total * 100) if total else ZERO):.2f}% of "
+                    "total emissions."
                 ),
             )
-            for rank, (source, amount) in enumerate(
-                sorted(emissions.items(), key=lambda item: item[1], reverse=True), start=1
-            )
-            if amount > ZERO
+            for rank, (source, amount) in enumerate(sorted_emissions, start=1)
         ]
+        source_percentages = {
+            source: (amount / total * 100) if total else ZERO
+            for source, amount in emissions.items()
+        }
         recommendation_payloads = [
             RecommendationCreate(
                 resultId=uuid4(),
@@ -262,11 +300,22 @@ async def run_reporting_period_pipeline(
                 estimatedCo2Reduction=Decimal(str(recommendation["predicted_co2_reduction"])),
                 estimatedCost=Decimal(str(recommendation["cost"])),
                 estimatedAnnualSavings=Decimal(str(recommendation["savings"])),
+                paybackMonths=(
+                    Decimal(str(recommendation["cost"]))
+                    / Decimal(str(recommendation["savings"]))
+                    * 12
+                    if recommendation["savings"]
+                    else None
+                ),
                 feasibilityScore=Decimal(str(recommendation["feasibility"] * 100)),
-                confidenceScore=Decimal(str(recommendation["feasibility"] * 100)),
+                confidenceScore=Decimal("85"),
                 aiExplanation=(
-                    f"{recommendation['name']} targets the "
-                    f"{recommendation['source']} emission category."
+                    f"{SOURCE_METADATA[recommendation['source']]['name']} produces "
+                    f"{emissions[recommendation['source']]:.2f} kgCO2e "
+                    f"({source_percentages[recommendation['source']]:.2f}% of total emissions). "
+                    f"The {MODEL_VERSION} model predicts that {recommendation['name']} "
+                    f"could reduce approximately "
+                    f"{recommendation['predicted_co2_reduction']:.2f} kgCO2e."
                 ),
             )
             for priority, recommendation in enumerate(recommendations, start=1)
@@ -278,6 +327,10 @@ async def run_reporting_period_pipeline(
             source_payloads,
             recommendation_payloads,
             database,
+            recommendation_source_types=[
+                SOURCE_METADATA[recommendation["source"]]["type"]
+                for recommendation in recommendations
+            ],
         )
     except Exception as exc:
         await update_pipeline_run(run.id, "failed", database, str(exc))

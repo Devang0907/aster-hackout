@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { get } from "@/lib/api";
+import { DecimalValue, formatKgCo2eAsTonnes } from "@/lib/emissions";
 
 interface CarbonResult {
   id: string;
-  netCo2e: number;
+  netCo2e: DecimalValue;
   calculatedAt: string;
   reportingPeriodId: string;
 }
@@ -15,15 +16,19 @@ interface RecentActivityProps {
 export function RecentActivity({ factoryId }: RecentActivityProps) {
   const [results, setResults] = useState<CarbonResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function fetchResults() {
+      setLoading(true);
+      setError("");
       try {
         const response = await get(`/api/v1/factories/${factoryId}/carbon-results`);
         const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Unable to load carbon results");
         setResults(data.slice(0, 5)); // Show last 5 results
-      } catch (error) {
-        console.error("Failed to fetch carbon results:", error);
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "Unable to load carbon results");
       } finally {
         setLoading(false);
       }
@@ -49,7 +54,9 @@ export function RecentActivity({ factoryId }: RecentActivityProps) {
     <div className="rounded-xl border border-border bg-surface p-6">
       <h3 className="text-lg font-semibold text-primary mb-4">Latest Carbon Results</h3>
       {results.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No carbon results available</p>
+        <p className={`text-sm ${error ? "text-red-700" : "text-muted-foreground"}`}>
+          {error || "No carbon results available"}
+        </p>
       ) : (
         <div className="space-y-3">
           {results.map((result) => (
@@ -59,7 +66,7 @@ export function RecentActivity({ factoryId }: RecentActivityProps) {
             >
               <div>
                 <p className="text-sm font-medium text-primary">
-                  {Number(result.netCo2e).toFixed(2)} t CO2e
+                  {formatKgCo2eAsTonnes(result.netCo2e)}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {new Date(result.calculatedAt).toLocaleDateString()}

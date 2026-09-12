@@ -70,6 +70,7 @@ async def complete_pipeline_run(
     source_payloads: list[EmissionSourceCreate],
     recommendation_payloads: list[RecommendationCreate],
     database: Any,
+    recommendation_source_types: list[str] | None = None,
 ) -> Any:
     run = await database.mlpipelinerun.find_first(
         where={"id": str(run_id), "factoryId": str(factory_id)}
@@ -82,6 +83,10 @@ async def complete_pipeline_run(
     period = await _period(factory_id, result_payload.reportingPeriodId, database)
     if str(run.reportingPeriodId) != str(period.id):
         raise ConflictError("pipeline run and carbon result must use the same reporting period")
+    if recommendation_source_types is not None and len(recommendation_source_types) != len(
+        recommendation_payloads
+    ):
+        raise ConflictError("each recommendation must have a matching emission source type")
 
     result_payload = result_payload.model_copy(update={"pipelineRunId": run_id})
     async with database.tx() as transaction:
@@ -89,14 +94,21 @@ async def complete_pipeline_run(
             data=to_prisma_data(result_payload.model_dump(exclude_none=True))
             | {"factoryId": str(factory_id)}
         )
+        sources_by_type: dict[str, Any] = {}
         for payload in source_payloads:
             source_data = to_prisma_data(payload.model_dump(exclude_none=True))
             source_data["resultId"] = result.id
-            await transaction.emissionsource.create(data=source_data)
-        for payload in recommendation_payloads:
+            source = await transaction.emissionsource.create(data=source_data)
+            sources_by_type[str(source.sourceType).lower()] = source
+        for index, payload in enumerate(recommendation_payloads):
             recommendation_data = to_prisma_data(payload.model_dump(exclude_none=True))
             recommendation_data["factoryId"] = str(factory_id)
             recommendation_data["resultId"] = result.id
+            if recommendation_source_types is not None:
+                source = sources_by_type.get(recommendation_source_types[index].lower())
+                if source is None:
+                    raise ConflictError("recommendation emission source was not created")
+                recommendation_data["emissionSourceId"] = source.id
             await transaction.recommendation.create(data=recommendation_data)
         completed_at = datetime.now(UTC)
         await transaction.mlpipelinerun.update(

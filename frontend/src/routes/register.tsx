@@ -95,6 +95,11 @@ function Register() {
     e.preventDefault();
     setError("");
 
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -245,8 +250,10 @@ function Register() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-lg border border-border bg-background px-4 py-3 text-sm text-primary placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                   placeholder="••••••••"
+                  minLength={8}
                   required
                 />
+                <p className="mt-1 text-xs text-muted-foreground">Must be at least 8 characters</p>
               </div>
               <div>
                 <label

@@ -23,6 +23,8 @@ The application helps SMEs and factories:
 
 ## 2. Required technology stack
 
+### Backend
+
 The backend uses:
 
 - Python 3.12;
@@ -37,6 +39,25 @@ The backend uses:
 - environment-based configuration.
 
 The backend must not use SQLAlchemy, SQLModel, Django ORM, Tortoise ORM, or Prisma Client JS.
+
+### Frontend
+
+The frontend uses:
+
+- React 19;
+- TypeScript;
+- TanStack Start (React Router) for routing;
+- TanStack React Query for data fetching;
+- Vite for build tooling;
+- TailwindCSS v4 for styling;
+- shadcn/ui component library;
+- Radix UI primitives;
+- Framer Motion for animations;
+- Lucide React for icons;
+- React Hook Form with Zod for form validation;
+- Bun for package management.
+
+Location: `D:\Aster_Hackout\frontend`
 
 ### Prisma Python compatibility constraint
 
@@ -450,6 +471,8 @@ normal owner/manager endpoint.
 
 ## 10. Application structure
 
+### Backend
+
 ```text
 backend/
 ├── app/
@@ -485,6 +508,65 @@ backend/
 The FastAPI lifespan connects one process-wide asynchronous Prisma client at startup and
 disconnects it at shutdown. Requests reuse that client; they do not open a new connection each
 time.
+
+### Frontend
+
+```text
+frontend/
+├── public/
+│   ├── favicon.ico
+│   ├── logo.png
+│   └── image.png
+├── src/
+│   ├── components/
+│   │   ├── landing/
+│   │   │   ├── BusinessValue.tsx
+│   │   │   ├── CircularEconomy.tsx
+│   │   │   ├── FinalCta.tsx
+│   │   │   ├── Hero.tsx
+│   │   │   ├── HowItWorks.tsx
+│   │   │   ├── LeakPoints.tsx
+│   │   │   ├── Logo.tsx
+│   │   │   ├── Nav.tsx
+│   │   │   ├── Problem.tsx
+│   │   │   ├── Recommendations.tsx
+│   │   │   ├── Reveal.tsx
+│   │   │   ├── Simulator.tsx
+│   │   │   └── SiteFooter.tsx
+│   │   ├── dashboard/
+│   │   │   ├── DashboardLayout.tsx
+│   │   │   ├── Sidebar.tsx
+│   │   │   └── Header.tsx
+│   │   └── ProtectedRoute.tsx
+│   ├── lib/
+│   │   ├── api.ts
+│   │   ├── auth.ts
+│   │   └── lovable-error-reporting.ts
+│   ├── routes/
+│   │   ├── __root.tsx
+│   │   ├── index.tsx
+│   │   ├── signin.tsx
+│   │   ├── register.tsx
+│   │   ├── dashboard.tsx
+│   │   ├── privacy-policy.tsx
+│   │   ├── terms-of-service.tsx
+│   │   ├── dashboard.emissions.tsx
+│   │   ├── dashboard.leak-points.tsx
+│   │   ├── dashboard.recommendations.tsx
+│   │   ├── dashboard.settings.tsx
+│   │   └── dashboard.simulations.tsx
+│   ├── router.tsx
+│   ├── server.ts
+│   ├── start.ts
+│   └── styles.css
+├── components.json
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── tailwind.config.ts
+```
+
+The frontend uses TanStack Start for file-based routing with server-side rendering capabilities.
 
 ## 11. Configuration
 
@@ -675,7 +757,101 @@ require a recognized methodology, evidence workflow, and external verification/c
   separate components and are not fabricated by this backend foundation.
 - The `.env` file is local/deployment state and is intentionally excluded from source control.
 
-## 19. ER diagram
+## 20. Current implementation status
+
+### Backend implementation
+
+The backend is fully implemented with:
+
+- Complete 18-model Prisma schema with PostgreSQL migrations
+- FastAPI application with 23 API endpoints
+- JWT-based authentication with development header mode support
+- Role-based authorization (admin, factory_owner, factory_manager)
+- Admin metadata endpoints for users and factories
+- Factory registration, management, and manager assignment
+- Reporting period creation and submission workflow
+- Operational data entry (material usage, energy usage, waste streams, logistics)
+- Carbon results and emission source tracking
+- Recommendation engine integration with status management
+- What-if simulation capabilities
+- Reference material catalogs (materials, alternatives, interventions, emission factors)
+- Comprehensive test suite (20 tests covering authorization, schema validation, and data integrity)
+- PostgreSQL triggers for data integrity beyond Prisma schema
+- Audit logging system
+
+### Frontend implementation
+
+The frontend is implemented with:
+
+**Landing page components:**
+- Hero section with call-to-action
+- Problem statement
+- How it works section
+- Leak points visualization
+- Recommendations showcase
+- Circular economy explanation
+- Business value proposition
+- Final CTA section
+- Responsive navigation with authentication state
+- Footer with legal links (Privacy Policy, Terms of Service)
+
+**Authentication pages:**
+- Sign in page with JWT authentication
+- Registration page with form validation
+
+**Dashboard pages:**
+- Dashboard layout with sidebar navigation
+- Emissions tracking view
+- Leak points analysis view
+- Recommendations management view
+- What-if simulations view
+- Settings page
+
+**Legal pages:**
+- Privacy Policy page
+- Terms of Service page
+
+**Features:**
+- Protected routes with authentication checks
+- API integration layer for backend communication
+- Authentication state management
+- Responsive design with TailwindCSS
+- Smooth animations with Framer Motion
+- Form validation with React Hook Form and Zod
+- Modern UI components from shadcn/ui
+
+### Project structure
+
+- Backend: `D:\Aster_Hackout\backend` — FastAPI + PostgreSQL + Prisma
+- Frontend: `D:\Aster_Hackout\frontend` — React + TanStack Start + TailwindCSS
+- Recommendation Engine: `D:\Aster_Hackout\recommendation_engine` — ML pipeline for emissions analysis
+
+### Current state
+
+- Backend API is fully functional with all endpoints implemented
+- Frontend landing page is complete with all sections
+- Authentication flow is implemented (sign in, register)
+- Dashboard structure is in place with navigation
+- Legal pages (Privacy Policy, Terms of Service) are created
+- Footer has been updated with legal links in a dedicated "Legal" section
+- README has been updated with professional header including logo, badges, and project description
+- All routes are properly configured in TanStack Start router
+
+### Next steps
+
+Potential future enhancements:
+- Complete dashboard views with real data integration
+- Implement recommendation engine integration
+- Add ML pipeline run tracking UI
+- Implement carbon credit estimation visualization
+- Add reporting period submission workflow
+- Enhance simulation interface with interactive controls
+- Add data visualization charts for emissions trends
+- Implement factory selector in dashboard
+- Add user profile management
+- Implement notification system for recommendations
+
+## 21. ER diagram
 
 ```mermaid
 erDiagram

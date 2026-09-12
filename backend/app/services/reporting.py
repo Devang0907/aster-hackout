@@ -75,6 +75,31 @@ async def list_reporting_periods(
     )
 
 
+async def delete_reporting_period(
+    factory_id: UUID,
+    period_id: UUID,
+    user: UserContext,
+    database: Any,
+) -> None:
+    await assert_factory_operational_access(user, factory_id, database)
+    period = await database.reportingperiod.find_first(
+        where={"id": str(period_id), "factoryId": str(factory_id)}
+    )
+    if period is None:
+        raise NotFoundError("reporting period not found")
+    async with database.tx() as transaction:
+        await transaction.reportingperiod.delete(where={"id": str(period_id)})
+        await transaction.auditlog.create(
+            data={
+                "userId": str(user.id),
+                "factoryId": str(factory_id),
+                "action": "REPORTING_PERIOD_DELETED",
+                "entityType": "ReportingPeriod",
+                "entityId": str(period_id),
+            }
+        )
+
+
 async def submit_reporting_period(
     factory_id: UUID,
     period_id: UUID,
