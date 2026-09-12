@@ -158,7 +158,9 @@ def _calculate_emissions(data: dict[str, Any]) -> tuple[dict[str, Decimal], Deci
             factors,
             "transport",
             [
-                f"{record.fuelType or ''} {record.transportType}".strip().lower(),
+                (
+                    f"{getattr(record, 'fuelType', '') or ''} {record.transportType}"
+                ).strip().lower(),
                 str(record.transportType).lower(),
                 str(record.mode).lower(),
             ],

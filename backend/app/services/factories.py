@@ -4,12 +4,12 @@ from uuid import UUID
 from app.repositories.helpers import to_prisma_data
 from app.schemas.factory import FactoryCreate, FactoryUpdate
 from app.schemas.user import ManagerAccountCreate, UserContext, UserRole
+from app.security.passwords import hash_password
 from app.services.authorization import (
     assert_factory_operational_access,
     assert_factory_owner_access,
 )
 from app.services.errors import ConflictError, ForbiddenError
-from app.security.passwords import hash_password
 
 
 async def list_accessible_factories(user: UserContext, database: Any) -> list[Any]:
@@ -86,7 +86,9 @@ async def create_and_assign_manager(
         existing_by_id = None
         if payload.password is None:
             raise ConflictError("a password is required for a new manager account")
-        existing_by_email = await database.user.find_unique(where={"email": str(payload.email).lower()})
+        existing_by_email = await database.user.find_unique(
+            where={"email": str(payload.email).lower()}
+        )
         if existing_by_email is not None:
             raise ConflictError("email is already assigned to another account")
         import uuid

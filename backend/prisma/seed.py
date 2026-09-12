@@ -1,3 +1,5 @@
+# ruff: noqa: E402
+
 import argparse
 import asyncio
 import os
@@ -16,8 +18,9 @@ for import_path in (BACKEND_ROOT, REPOSITORY_ROOT):
     if str(import_path) not in sys.path:
         sys.path.insert(0, str(import_path))
 
-from app.security.passwords import hash_password
 from recommendation_engine.data.interventions import INTERVENTIONS as ENGINE_INTERVENTIONS
+
+from app.security.passwords import hash_password
 
 MATERIALS = [
     ("MAT-VPOLY", "Virgin Polyester", "Polymer", False, True, Decimal("35")),

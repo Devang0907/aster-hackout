@@ -2,7 +2,6 @@ import json
 from typing import Any
 from uuid import UUID
 
-from app.repositories.helpers import to_prisma_data
 from app.schemas.simulation import SimulationCreate
 from app.schemas.user import UserContext
 from app.services.authorization import assert_factory_operational_access

@@ -62,7 +62,7 @@ async def create_reporting_period(
             raise
         period_status = str(getattr(period.status, "value", period.status))
         if period_status != "draft":
-            raise ConflictError("reporting period already exists and has been submitted")
+            raise ConflictError("reporting period already exists and has been submitted") from None
     return period
 
 

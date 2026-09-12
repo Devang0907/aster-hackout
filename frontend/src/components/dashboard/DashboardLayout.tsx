@@ -3,6 +3,7 @@ import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { logout, getUser } from "@/lib/auth";
 import { get } from "@/lib/api";
 import { getSelectedFactoryId, setSelectedFactoryId } from "@/lib/factory";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 
 interface DashboardLayoutProps {
   children?: ReactNode;
@@ -135,7 +136,7 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
               {factories.length > 0 && (
                 <select
                   aria-label="Select factory"
-                  value={selectedFactoryId || factories[0].id}
+                  value={selectedFactoryId || factories[0]?.id}
                   onChange={(event) => handleFactoryChange(event.target.value)}
                   className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-secondary"
                 >
@@ -162,6 +163,9 @@ export function DashboardLayout({ children, title = "Dashboard" }: DashboardLayo
         {/* Page Content */}
         <main className="p-6">{children || <Outlet />}</main>
       </div>
+
+      {/* Chat Widget */}
+      <ChatWidget />
     </div>
   );
 }

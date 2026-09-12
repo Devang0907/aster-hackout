@@ -1,8 +1,5 @@
 import pytest
-
-from recommendation_engine.services.recommendation_engine import (
-    generate_recommendations,
-)
+from recommendation_engine.services.recommendation_engine import generate_recommendations
 
 
 def test_engine_generates_recommendations_with_supplied_model_artifact() -> None:
