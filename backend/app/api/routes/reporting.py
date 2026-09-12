@@ -1,7 +1,8 @@
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from prisma.errors import PrismaError
 
 from app.api.dependencies import FactoryOperator
 from app.core.database import get_database
@@ -26,7 +27,13 @@ async def create_period(
     current_user: FactoryOperator,
     database: Database,
 ) -> Any:
-    return await service.create_reporting_period(factory_id, payload, current_user, database)
+    try:
+        return await service.create_reporting_period(factory_id, payload, current_user, database)
+    except PrismaError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Reporting data could not be stored. Check the database connection and schema.",
+        ) from exc
 
 
 @router.post("/{period_id}/submit")

@@ -2,6 +2,8 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from prisma.errors import UniqueViolationError
+
 from app.repositories.helpers import to_prisma_data
 from app.schemas.carbon import ReportingPeriodCreate
 from app.schemas.user import UserContext
@@ -27,18 +29,40 @@ async def create_reporting_period(
         }
     )
     if existing is not None:
-        raise ConflictError("reporting period already exists")
-    async with database.tx() as transaction:
-        period = await transaction.reportingperiod.create(data=data)
-        await transaction.auditlog.create(
-            data={
-                "userId": str(user.id),
+        existing_status_value = getattr(existing, "status", None)
+        existing_status = str(
+            getattr(existing_status_value, "value", existing_status_value)
+        )
+        if existing_status == "draft":
+            return existing
+        raise ConflictError("reporting period already exists and has been submitted")
+    try:
+        async with database.tx() as transaction:
+            period = await transaction.reportingperiod.create(data=data)
+            await transaction.auditlog.create(
+                data={
+                    "userId": str(user.id),
+                    "factoryId": str(factory_id),
+                    "action": "REPORTING_PERIOD_CREATED",
+                    "entityType": "ReportingPeriod",
+                    "entityId": period.id,
+                }
+            )
+    except UniqueViolationError:
+        # Another request may have created this period between the lookup and
+        # insert. Reuse a still-editable draft instead of leaking a 500.
+        period = await database.reportingperiod.find_first(
+            where={
                 "factoryId": str(factory_id),
-                "action": "REPORTING_PERIOD_CREATED",
-                "entityType": "ReportingPeriod",
-                "entityId": period.id,
+                "periodStart": data["periodStart"],
+                "periodEnd": data["periodEnd"],
             }
         )
+        if period is None:
+            raise
+        period_status = str(getattr(period.status, "value", period.status))
+        if period_status != "draft":
+            raise ConflictError("reporting period already exists and has been submitted")
     return period
 
 
