@@ -1,3 +1,5 @@
+![CarbonLoop Landing Page](frontend/public/image.png)
+
 # Industrial Emission Leak-Point Detector Backend
 
 FastAPI + PostgreSQL + Prisma Client Python backend for factory-scoped emissions data,
