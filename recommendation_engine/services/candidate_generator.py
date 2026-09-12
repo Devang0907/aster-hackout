@@ -1,4 +1,4 @@
-from data.interventions import INTERVENTIONS
+from ..data.interventions import INTERVENTIONS
 
 
 def generate_candidates(ranked_sources, max_sources=3):

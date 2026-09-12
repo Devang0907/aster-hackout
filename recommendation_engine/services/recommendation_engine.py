@@ -1,12 +1,17 @@
-from services.candidate_generator import generate_candidates
-from services.ml_predictor import predict_co2_reduction
-from services.score_calculator import (
+from .candidate_generator import generate_candidates
+
+from .ml_predictor import predict_co2_reduction
+
+from .score_calculator import (
     calculate_roi,
     calculate_score
 )
 
 
-def generate_recommendations(emissions, ranked_sources ):
+def generate_recommendations(
+    emissions,
+    ranked_sources
+):
 
     candidates = generate_candidates(
         ranked_sources
@@ -35,8 +40,7 @@ def generate_recommendations(emissions, ranked_sources ):
 
         predictions.append({
             "intervention": intervention,
-            "predicted_reduction":
-                predicted_reduction,
+            "predicted_reduction": predicted_reduction,
             "roi": roi
         })
 
@@ -61,14 +65,20 @@ def generate_recommendations(emissions, ranked_sources ):
         intervention = item["intervention"]
 
         co2_score = (
-            (item["predicted_reduction"] - min_co2)
+            (
+                item["predicted_reduction"]
+                - min_co2
+            )
             / (max_co2 - min_co2)
             if max_co2 != min_co2
             else 1
         )
 
         roi_score = (
-            (item["roi"] - min_roi)
+            (
+                item["roi"]
+                - min_roi
+            )
             / (max_roi - min_roi)
             if max_roi != min_roi
             else 1
@@ -79,7 +89,6 @@ def generate_recommendations(emissions, ranked_sources ):
             roi_score,
             intervention["feasibility"]
         )
-
 
         results.append({
 

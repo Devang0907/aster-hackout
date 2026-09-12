@@ -1,5 +1,7 @@
 import joblib
 import os
+import pandas as pd
+
 
 BASE_DIR = os.path.dirname(
     os.path.dirname(os.path.abspath(__file__))
@@ -19,25 +21,31 @@ def predict_co2_reduction(
     intervention
 ):
 
-    features = [[
+    features = pd.DataFrame([{
+        "electricity_emission":
+            emissions["electricity"],
 
-        emissions["electricity"],
+        "diesel_emission":
+            emissions["diesel"],
 
-        emissions["diesel"],
+        "raw_material_emission":
+            emissions["raw_material"],
 
-        emissions["raw_material"],
+        "waste_emission":
+            emissions["waste"],
 
-        emissions["waste"],
+        "transport_emission":
+            emissions["transport"],
 
-        emissions["transport"],
+        "cost":
+            intervention["cost"],
 
-        intervention["cost"],
+        "savings":
+            intervention["savings"],
 
-        intervention["savings"],
-
-        intervention["feasibility"]
-
-    ]]
+        "feasibility":
+            intervention["feasibility"]
+    }])
 
     prediction = model.predict(features)
 

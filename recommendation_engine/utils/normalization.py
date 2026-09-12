@@ -1,4 +1,8 @@
-def normalize(value, minimum, maximum):
+def normalize(
+    value,
+    minimum,
+    maximum
+):
 
     if maximum == minimum:
         return 1.0

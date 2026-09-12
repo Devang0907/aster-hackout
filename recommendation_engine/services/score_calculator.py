@@ -4,13 +4,18 @@ def calculate_roi(cost, savings):
 
     ROI = savings / cost
     """
+
     if cost <= 0:
         return 0.0
 
     return savings / cost
 
 
-def calculate_score(co2_score, roi_score, feasibility):
+def calculate_score(
+    co2_score,
+    roi_score,
+    feasibility
+):
     """
     Calculate the final recommendation score.
 

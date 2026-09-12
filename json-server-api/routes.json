@@ -1,0 +1,20 @@
+{
+  "/api/users": "/users",
+  "/api/factories": "/factories",
+  "/api/reporting-periods": "/reporting_periods",
+  "/api/materials": "/materials",
+  "/api/material-alternatives": "/material_alternatives",
+  "/api/material-usage": "/factory_material_usage",
+  "/api/energy-usage": "/energy_usage",
+  "/api/waste-streams": "/waste_streams",
+  "/api/logistics": "/logistics",
+  "/api/emission-factors": "/emission_factors",
+  "/api/carbon-results": "/carbon_results",
+  "/api/emission-sources": "/emission_sources",
+  "/api/interventions": "/interventions",
+  "/api/recommendations": "/recommendations",
+  "/api/simulations": "/simulations",
+  "/api/ml-pipeline-runs": "/ml_pipeline_runs",
+  "/api/carbon-credit-results": "/carbon_credit_results",
+  "/api/audit-logs": "/audit_logs"
+}
