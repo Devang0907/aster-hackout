@@ -1,8 +1,13 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from services.emission_service import (
-    get_factory_emissions
+    calculate_factory_emissions
 )
+
+from services.recommendation_service import (
+    create_recommendations_for_factory
+)
+
 
 router = APIRouter(
     prefix="/api/emissions",
@@ -10,9 +15,33 @@ router = APIRouter(
 )
 
 
-@router.get("/{factory_id}")
-async def get_emissions(factory_id: int):
+@router.post("/{factory_id}/calculate")
+async def calculate_emissions(factory_id: str):
 
-    return await get_factory_emissions(
-        factory_id
-    )
+    try:
+        emission_result = await calculate_factory_emissions(
+            factory_id
+        )
+
+        recommendation_result = (
+            await create_recommendations_for_factory(
+                factory_id
+            )
+        )
+
+        return {
+            "emissions": emission_result,
+            "recommendations": recommendation_result
+        }
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=404,
+            detail=str(e)
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )

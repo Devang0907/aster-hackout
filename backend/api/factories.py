@@ -46,7 +46,7 @@ async def create_factory(factory: dict):
 
 @router.put("/{factory_id}")
 async def update_factory(
-    factory_id: int,
+    factory_id: str,
     factory: dict
 ):
 
@@ -58,7 +58,7 @@ async def update_factory(
 
 
 @router.delete("/{factory_id}")
-async def delete_factory(factory_id: int):
+async def delete_factory(factory_id: str):
 
     await delete_resource(
         "factories",

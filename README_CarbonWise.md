@@ -1,1070 +1,548 @@
 # CarbonWise
 
-**CarbonWise** is an AI-powered industrial carbon-emission analysis and recommendation system built for Aster Hackout 2026.
+**CarbonWise** is an AI-powered industrial carbon-emission analysis and recommendation backend built for Aster Hackout 2026.
 
 The current backend uses:
 
-- **FastAPI** for the application API
-- **JSON Server** as a temporary/mock database API
-- **Python recommendation engine** for emission-based recommendations
-- **scikit-learn** for ML prediction
-- **pytest** for backend and end-to-end testing
-
-The project is structured so the JSON Server can later be replaced by a real database/API without rewriting the recommendation logic.
+- **FastAPI** for HTTP APIs
+- **Neon PostgreSQL** as the primary database
+- **psycopg 3** for asynchronous PostgreSQL access
+- **scikit-learn** for ML-based CO2-reduction prediction
+- **Random Forest** as the currently selected recommendation model
+- **pytest** for database, API, ML, emission, recommendation, and end-to-end tests
 
 ---
 
-# 1. Project Structure
+## 1. Current Architecture
+
+```text
+React / Vite frontend
+        |
+        v
+     FastAPI
+        |
+        +-----------------------------+
+        |                             |
+        v                             v
+backend/services/data_api.py   Recommendation Engine
+        |                             |
+        v                             +--> candidate generation
+backend/services/db_api.py            +--> Random Forest prediction
+        |                             +--> ROI calculation
+        v                             +--> feasibility scoring
+ Neon PostgreSQL                      +--> final ranking
+        ^                             |
+        |                             v
+        +------ saved recommendations +
+```
+
+The main flow for emission analysis is:
+
+```text
+Factory data in Neon
+        |
+        v
+Emission calculation
+        |
+        v
+Carbon result + ranked emission sources
+        |
+        v
+ML recommendation engine
+        |
+        v
+Predicted CO2 reduction + ROI + feasibility + score
+        |
+        v
+Top recommendations
+        |
+        v
+Saved back to Neon
+```
+
+---
+
+## 2. Project Structure
 
 ```text
 aster-hackout/
-│
-├── .env
-├── .env.example
-├── .gitignore
-├── README.md
-│
-├── backend/
-│   ├── __init__.py
-│   ├── main.py
-│   ├── config.py
-│   ├── requirements.txt
-│   ├── start.bat
-│   │
-│   ├── api/
-│   │   ├── __init__.py
-│   │   ├── factories.py
-│   │   ├── emissions.py
-│   │   ├── recommendations.py
-│   │   ├── simulations.py
-│   │   ├── materials.py
-│   │   ├── energy.py
-│   │   ├── waste.py
-│   │   └── logistics.py
-│   │
-│   ├── services/
-│   │   ├── __init__.py
-│   │   ├── data_api.py
-│   │   ├── json_api.py
-│   │   ├── emission_service.py
-│   │   ├── recommendation_service.py
-│   │   └── simulation_service.py
-│   │
-│   ├── models/
-│   │   ├── __init__.py
-│   │   └── schemas.py
-│   │
-│   └── utils/
-│       ├── __init__.py
-│       ├── calculations.py
-│       └── normalization.py
-│
-├── recommendation_engine/
-│   ├── __init__.py
-│   ├── main.py
-│   │
-│   ├── data/
-│   │   └── interventions.py
-│   │
-│   ├── ml/
-│   │   ├── dataset.csv
-│   │   ├── model.pkl
-│   │   └── train.py
-│   │
-│   ├── models/
-│   │   └── recommendation_model.py
-│   │
-│   ├── services/
-│   │   ├── candidate_generator.py
-│   │   ├── ml_predictor.py
-│   │   ├── recommendation_engine.py
-│   │   └── score_calculator.py
-│   │
-│   └── utils/
-│       └── normalization.py
-│
-├── json-server-api/
-│   ├── db.json
-│   ├── db.backup.json
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── routes.json
-│   └── README.md
-│
-└── tests/
-    ├── __init__.py
-    ├── test_json_server.py
-    ├── test_recommendation_engine.py
-    ├── test_fastapi.py
-    └── test_e2e.py
+|
+|-- .env                  # local secrets; never commit
+|-- .env.example          # safe configuration template
+|-- .gitignore
+|-- pytest.ini
+|-- README.md
+|-- README_CarbonWise.md
+|
+|-- backend/
+|   |-- main.py
+|   |-- config.py
+|   |-- requirements.txt
+|   |
+|   |-- api/
+|   |   |-- emissions.py
+|   |   |-- energy.py
+|   |   |-- factories.py
+|   |   |-- logistics.py
+|   |   |-- materials.py
+|   |   |-- recommendations.py
+|   |   |-- simulations.py
+|   |   `-- waste.py
+|   |
+|   `-- services/
+|       |-- data_api.py
+|       |-- db_api.py
+|       |-- emission_service.py
+|       |-- recommendation_service.py
+|       `-- simulation_service.py
+|
+|-- recommendation_engine/
+|   |-- main.py
+|   |
+|   |-- data/
+|   |   `-- interventions.py
+|   |
+|   |-- ml/
+|   |   |-- dataset.csv
+|   |   |-- model.pkl
+|   |   `-- train.py
+|   |
+|   |-- models/
+|   |   `-- recommendation_model.py
+|   |
+|   `-- services/
+|       |-- candidate_generator.py
+|       |-- ml_predictor.py
+|       |-- recommendation_engine.py
+|       `-- score_calculator.py
+|
+|-- tests_neon/
+|   |-- conftest.py
+|   |-- test_database.py
+|   |-- test_fastapi.py
+|   |-- test_ml_model.py
+|   |-- test_recommendation_engine.py
+|   |-- test_emissions.py
+|   |-- test_recommendations_api.py
+|   `-- test_e2e.py
+|
 ```
 
 ---
 
-# 2. How CarbonWise Works
+## 3. Requirements
 
-The current request flow is:
-
-```text
-UI
- │
- ▼
-FastAPI
- │
- ▼
-backend/services/data_api.py
- │
- ▼
-backend/services/json_api.py
- │
- ▼
-JSON Server
- │
- ▼
-Emission data
- │
- ▼
-Recommendation Engine
- │
- ├── Candidate generation
- ├── ML prediction
- ├── CO2 reduction estimation
- ├── ROI calculation
- ├── Feasibility calculation
- ├── Score calculation
- └── Ranking
- │
- ▼
-Top recommendations
- │
- ▼
-FastAPI
- │
- ▼
-Saved to database API
- │
- ▼
-Returned to UI
-```
-
-The recommendation engine is the source of truth for recommendation calculations.
-
-FastAPI should **not duplicate** recommendation-engine logic.
-
-FastAPI is responsible for:
-
-- receiving HTTP requests
-- reading factory/emission data
-- calling the recommendation engine
-- saving recommendation results
-- returning JSON to the UI
-
-The recommendation engine is responsible for:
-
-- generating candidate interventions
-- predicting emission reduction
-- calculating ROI
-- calculating feasibility
-- scoring recommendations
-- ranking recommendations
-- returning the top recommendations
-
----
-
-# 3. Requirements
-
-Install:
+Recommended:
 
 - Python 3.11+
-- Node.js + npm
 - Git
+- A Neon PostgreSQL database
 
 Check versions:
 
 ```powershell
 python --version
-node --version
-npm --version
 git --version
 ```
 
----
-
-# 4. Python Setup
-
-Open PowerShell in the project root:
+Install project dependencies:
 
 ```powershell
-cd C:\Users\Asus\Desktop\Projects\aster-hackout
+python -m pip install -r backend\requirements.txt
 ```
 
-Create a virtual environment if one does not already exist:
-
-```powershell
-python -m venv backend\venv
-```
-
-Activate it:
-
-```powershell
-.\backend\venv\Scripts\Activate.ps1
-```
-
-Install backend dependencies:
-
-```powershell
-pip install -r backend\requirements.txt
-```
-
-If pytest is not already installed:
-
-```powershell
-pip install pytest
-```
-
----
-
-# 5. Environment Variables
-
-Create this file in the project root:
+The backend requires packages including:
 
 ```text
-.env
+fastapi
+uvicorn
+psycopg[binary]
+pandas
+joblib
+scikit-learn
+python-dotenv
+pytest
+httpx
 ```
 
-Example:
+---
+
+## 4. Environment Configuration
+
+Copy the example file:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Configure `.env`:
 
 ```env
-DATA_BACKEND=json
-
-JSON_SERVER_URL=http://localhost:3000
-
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require
 FRONTEND_URL=http://localhost:5173
 ```
 
-Do not commit `.env`.
+### Important
 
-Use `.env.example` to document the required configuration:
+- Never commit `.env`.
+- Never put the real Neon password in `.env.example`.
+- `.env.example` should contain placeholders only.
+- The root `.gitignore` already excludes `.env` and `.env.*`, while allowing `.env.example`.
 
-```env
-DATA_BACKEND=json
-JSON_SERVER_URL=http://localhost:3000
-DB_API_URL=http://localhost:9000
-FRONTEND_URL=http://localhost:5173
+If `.env` was ever committed before adding it to `.gitignore`, ignoring it is not enough. Remove it from Git tracking once:
+
+```powershell
+git rm --cached .env
 ```
+
+Then rotate the exposed database password if the secret was pushed to a remote repository.
 
 ---
 
-# 6. Start the JSON Server
+## 5. Start the FastAPI Backend
 
-Open a new PowerShell terminal:
-
-```powershell
-cd C:\Users\Asus\Desktop\Projects\aster-hackout\json-server-api
-```
-
-Install packages if required:
+From the project root in PowerShell:
 
 ```powershell
-npm install
-```
-
-Start JSON Server:
-
-```powershell
-npm start
-```
-
-It should run at:
-
-```text
-http://localhost:3000
-```
-
-Example resources:
-
-```text
-http://localhost:3000/factories
-http://localhost:3000/carbon_results
-http://localhost:3000/recommendations
-```
-
-Keep this terminal open.
-
----
-
-# 7. Start FastAPI
-
-Open another PowerShell terminal.
-
-Go to the project root:
-
-```powershell
-cd C:\Users\Asus\Desktop\Projects\aster-hackout
-```
-
-Activate the virtual environment:
-
-```powershell
-.\backend\venv\Scripts\Activate.ps1
-```
-
-Set the Python path:
-
-```powershell
-$env:PYTHONPATH = "$PWD;$PWD\backend"
-```
-
-Start FastAPI:
-
-```powershell
+$env:PYTHONPATH="$PWD;$PWD\backend"
 python -m uvicorn backend.main:app --reload --port 8000
 ```
 
-FastAPI should run at:
+Backend URL:
 
 ```text
-http://localhost:8000
+http://127.0.0.1:8000
 ```
 
 Swagger documentation:
 
 ```text
-http://localhost:8000/docs
+http://127.0.0.1:8000/docs
+```
+
+Health endpoint:
+
+```text
+http://127.0.0.1:8000/health
 ```
 
 ---
 
-# 8. Important API Endpoints
+## 6. Neon Database
 
-## Health
-
-```http
-GET /health
-```
-
-Example:
+CarbonWise currently uses the following PostgreSQL tables:
 
 ```text
-http://localhost:8000/health
+users
+factories
+reporting_periods
+materials
+material_alternatives
+factory_material_usage
+energy_usage
+waste_streams
+logistics
+emission_factors
+ml_pipeline_runs
+carbon_results
+emission_sources
+interventions
+recommendations
+simulations
+carbon_credit_results
+audit_logs
 ```
 
-Expected response:
-
-```json
-{
-  "status": "healthy"
-}
-```
-
----
-
-## Factories
-
-```http
-GET /api/factories/
-```
-
-Get one factory:
-
-```http
-GET /api/factories/{factory_id}
-```
-
-Example factory ID:
-
-```text
-33333333-3333-3333-3333-333333333333
-```
-
-Example:
-
-```text
-http://localhost:8000/api/factories/33333333-3333-3333-3333-333333333333
-```
-
----
-
-## Recommendations
-
-```http
-GET /api/recommendations/{factory_id}
-```
-
-Example:
-
-```text
-http://localhost:8000/api/recommendations/33333333-3333-3333-3333-333333333333
-```
-
-The backend:
-
-1. loads the factory
-2. loads its carbon results
-3. builds an emissions dictionary
-4. ranks emission sources
-5. calls the recommendation engine
-6. saves generated recommendations
-7. returns the final result
-
----
-
-# 9. Recommendation Engine
-
-You can test the recommendation engine independently.
-
-From the project root:
-
-```powershell
-python -m recommendation_engine.main
-```
-
-Example emission input used by the project:
-
-```python
-{
-    "electricity": 35000,
-    "diesel": 10000,
-    "raw_material": 3000,
-    "waste": 500,
-    "transport": 1000
-}
-```
-
-The engine ranks sources by their emissions and returns up to three recommendations.
-
-Current recommendation scoring uses:
-
-```text
-CO2 reduction     50%
-ROI               30%
-Feasibility       20%
-```
-
-The recommendation engine should remain separate from the FastAPI service.
-
----
-
-# 10. Running Tests
-
-Make sure both services are running first:
-
-```text
-JSON Server -> port 3000
-FastAPI     -> port 8000
-```
-
-Then open a third terminal:
-
-```powershell
-cd C:\Users\Asus\Desktop\Projects\aster-hackout
-```
-
-Run all tests:
-
-```powershell
-pytest -v
-```
-
-Current test groups:
-
-```text
-test_json_server.py
-test_recommendation_engine.py
-test_fastapi.py
-test_e2e.py
-```
-
-The end-to-end test verifies the complete flow:
-
-```text
-JSON Server
-    ↓
-FastAPI
-    ↓
-Emission data
-    ↓
-Recommendation Engine
-    ↓
-Recommendations
-    ↓
-JSON Server
-```
-
----
-
-# 11. Data Access Layer
-
-The application should not directly depend on JSON Server.
-
-Use:
+Database access goes through:
 
 ```text
 backend/services/data_api.py
-```
-
-as the common data-access layer.
-
-Application code should import functions from:
-
-```python
-from services.data_api import (
-    get_resource,
-    get_resource_by_id,
-    create_resource,
-    update_resource,
-    delete_resource
-)
-```
-
-Do not directly import `json_api` inside normal route/service code.
-
-Current flow:
-
-```text
-FastAPI
-   ↓
-data_api.py
-   ↓
-json_api.py
-   ↓
-JSON Server
-```
-
-Later:
-
-```text
-FastAPI
-   ↓
-data_api.py
-   ↓
-db_api.py
-   ↓
-Real database API
-```
-
-This allows the database implementation to change without changing the rest of the application.
-
----
-
-# 12. Integrating a Real Database API
-
-When the real database/API becomes available, create:
-
-```text
+        |
+        v
 backend/services/db_api.py
+        |
+        v
+Neon PostgreSQL
 ```
 
-It should implement the same functions currently provided by `json_api.py`:
-
-```python
-async def get_resource(resource):
-    ...
-
-async def get_resource_by_id(resource, resource_id):
-    ...
-
-async def create_resource(resource, data):
-    ...
-
-async def update_resource(resource, resource_id, data):
-    ...
-
-async def delete_resource(resource, resource_id):
-    ...
-```
-
-The function interface should stay the same even if the real API uses completely different URLs internally.
-
-For example:
-
-```python
-import httpx
-
-from config import DB_API_URL
-
-
-async def get_resource(resource):
-
-    async with httpx.AsyncClient() as client:
-
-        response = await client.get(
-            f"{DB_API_URL}/{resource}"
-        )
-
-        response.raise_for_status()
-
-        return response.json()
-```
-
-The exact URL mapping should be changed to match the real backend API.
+Application API code uses `data_api.py`, which delegates directly to the Neon PostgreSQL database service.
 
 ---
 
-# 13. Switching Between JSON Server and the Real Database
+## 7. Emission Calculation
 
-Once `db_api.py` exists, `data_api.py` can become:
+Run an emission calculation with:
 
-```python
-from config import DATA_BACKEND
-
-
-if DATA_BACKEND == "json":
-
-    from services.json_api import (
-        get_resource,
-        get_resource_by_id,
-        create_resource,
-        update_resource,
-        delete_resource
-    )
-
-elif DATA_BACKEND == "db":
-
-    from services.db_api import (
-        get_resource,
-        get_resource_by_id,
-        create_resource,
-        update_resource,
-        delete_resource
-    )
-
-else:
-
-    raise ValueError(
-        f"Unknown DATA_BACKEND: {DATA_BACKEND}"
-    )
+```http
+POST /api/emissions/{factory_id}/calculate
 ```
 
-For local development:
+The emission service calculates categories including:
 
-```env
-DATA_BACKEND=json
+- Electricity
+- Fuel
+- Raw materials
+- Transport
+- Waste
+
+It stores or updates:
+
+- `carbon_results`
+- `emission_sources`
+
+Emission sources are ranked from highest to lowest contribution.
+
+Example flow:
+
+```text
+Electricity data -----+
+Material usage -------+
+Waste ----------------+--> emission_service.py --> carbon_results
+Logistics ------------+                           emission_sources
+Emission factors -----+
 ```
-
-For the real API:
-
-```env
-DATA_BACKEND=db
-DB_API_URL=https://your-real-api.example.com
-```
-
-No API route or recommendation-engine code should need to change.
 
 ---
 
-# 14. If the Real Database Is Directly Accessible
+## 8. ML Recommendation Engine
 
-If you receive direct PostgreSQL/MySQL access instead of a separate REST API, keep the same architecture:
-
-```text
-FastAPI
-   ↓
-data_api.py
-   ↓
-db_api.py
-   ↓
-PostgreSQL / MySQL
-```
-
-In that case, `db_api.py` would use something like:
+The recommendation engine is called by the FastAPI recommendation service.
 
 ```text
-SQLAlchemy
-psycopg
-asyncpg
+Carbon result
+    |
+    v
+Emission vector
+    |
+    v
+Ranked sources
+    |
+    v
+Candidate interventions
+    |
+    v
+model.pkl
+    |
+    v
+Predicted CO2 reduction
+    |
+    +--> ROI
+    +--> feasibility
+    `--> recommendation score
+             |
+             v
+          Top 3
 ```
 
-rather than `httpx`.
+Current model inputs:
 
-For example:
-
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/carbonwise
+```text
+electricity_emission
+diesel_emission
+raw_material_emission
+waste_emission
+transport_emission
+cost
+savings
+feasibility
 ```
 
-Do not put this password in Git.
+The current trained model was selected by comparing multiple regressors and is stored at:
+
+```text
+recommendation_engine/ml/model.pkl
+```
+
+The model file is intentionally committed because the application needs it at runtime.
 
 ---
 
-# 15. Integrating a Flask UI
+## 9. Retrain the ML Model
 
-If your team decides to use a **Flask UI instead of React**, Flask should act as the frontend/client.
-
-Recommended architecture:
+Training data:
 
 ```text
-Browser
-   ↓
-Flask UI
-   ↓
-FastAPI
-   ↓
-Services
-   ↓
-Database
-   ↓
-Recommendation Engine
+recommendation_engine/ml/dataset.csv
 ```
 
-Flask should **not access the recommendation engine directly**.
-
-Flask should call FastAPI.
-
----
-
-# 16. Example Flask UI Structure
-
-A separate frontend can look like:
-
-```text
-flask-ui/
-│
-├── app.py
-├── requirements.txt
-│
-├── templates/
-│   ├── index.html
-│   ├── factory.html
-│   └── recommendations.html
-│
-└── static/
-    ├── css/
-    │   └── style.css
-    └── js/
-        └── main.js
-```
-
-Install Flask:
+Train from the project root:
 
 ```powershell
-pip install flask requests
+python -m recommendation_engine.ml.train
 ```
 
-Example `requirements.txt`:
+The training script compares supported models using cross-validation and writes the selected model to:
 
 ```text
-Flask
-requests
+recommendation_engine/ml/model.pkl
 ```
+
+Restart FastAPI after retraining because the model is loaded when the prediction module is imported.
 
 ---
 
-# 17. Basic Flask Application
+## 10. Testing
 
-Example:
+The current Neon-based tests are in:
 
-```python
-from flask import Flask, render_template
-import requests
-
-
-app = Flask(__name__)
-
-
-FASTAPI_URL = "http://localhost:8000"
-
-
-@app.route("/")
-def home():
-
-    return render_template("index.html")
-
-
-@app.route("/factories")
-def factories():
-
-    response = requests.get(
-        f"{FASTAPI_URL}/api/factories/"
-    )
-
-    response.raise_for_status()
-
-    factories = response.json()
-
-    return render_template(
-        "factories.html",
-        factories=factories
-    )
-
-
-@app.route("/recommendations/<factory_id>")
-def recommendations(factory_id):
-
-    response = requests.get(
-        f"{FASTAPI_URL}/api/recommendations/{factory_id}"
-    )
-
-    response.raise_for_status()
-
-    data = response.json()
-
-    return render_template(
-        "recommendations.html",
-        data=data
-    )
-
-
-if __name__ == "__main__":
-    app.run(
-        debug=True,
-        port=5000
-    )
+```text
+tests_neon/
 ```
 
-Start Flask:
+They run against the FastAPI, Neon PostgreSQL, and ML stack.
+
+Run all current backend tests:
 
 ```powershell
-python app.py
+$env:PYTHONPATH="$PWD;$PWD\backend"
+pytest tests_neon -v
 ```
 
-It would normally run at:
+The suite covers:
+
+- Neon connection
+- expected PostgreSQL tables
+- factory data
+- FastAPI routes
+- emission calculation
+- emission-source ranking
+- ML model loading
+- ML predictions
+- recommendation scoring
+- ROI calculation
+- recommendation API
+- saved recommendations
+- full Neon -> emissions -> ML -> Neon flow
+
+Current verified result:
 
 ```text
-http://localhost:5000
+23 passed
+```
+
+### Windows event-loop configuration
+
+`psycopg.AsyncConnection` cannot use Windows' `ProactorEventLoop` in this test setup. `tests_neon/conftest.py` therefore uses `WindowsSelectorEventLoopPolicy` on Windows.
+
+`pytest.ini` contains:
+
+```ini
+[pytest]
+asyncio_mode = auto
 ```
 
 ---
 
-# 18. Flask Recommendation Template Example
+## 11. Main API Endpoints
 
-Example `templates/recommendations.html`:
+Common endpoints include:
 
-```html
-<!DOCTYPE html>
+```text
+GET  /health
+GET  /api/factories/
+GET  /api/factories/{factory_id}
+POST /api/emissions/{factory_id}/calculate
+GET  /api/recommendations/{factory_id}
+POST /api/recommendations/{factory_id}/generate
+```
 
-<html>
+Additional APIs exist for energy, materials, waste, logistics, and simulations.
 
-<head>
-    <title>CarbonWise Recommendations</title>
-</head>
+Use Swagger for the complete route list:
 
-<body>
-
-    <h1>
-        {{ data.factory.name }}
-    </h1>
-
-    <h2>Emission Sources</h2>
-
-    <ul>
-
-        {% for item in data.ranked_sources %}
-
-        <li>
-            {{ item.source }}:
-            {{ item.emission }}
-        </li>
-
-        {% endfor %}
-
-    </ul>
-
-    <h2>Recommendations</h2>
-
-    {% for recommendation in data.recommendations %}
-
-    <div>
-
-        <h3>
-            {{ recommendation.name }}
-        </h3>
-
-        <p>
-            Source:
-            {{ recommendation.source }}
-        </p>
-
-        <p>
-            Predicted CO2 Reduction:
-            {{ recommendation.predicted_co2_reduction }}
-        </p>
-
-        <p>
-            ROI:
-            {{ recommendation.roi }}
-        </p>
-
-        <p>
-            Score:
-            {{ recommendation.score }}
-        </p>
-
-    </div>
-
-    {% endfor %}
-
-</body>
-
-</html>
+```text
+http://127.0.0.1:8000/docs
 ```
 
 ---
 
-# 19. Full Architecture With Flask + Real Database
+## 12. Git Safety Before Committing
 
-The final architecture can be:
-
-```text
-                 Browser
-                    │
-                    ▼
-                Flask UI
-                 :5000
-                    │
-                    ▼
-                FastAPI
-                 :8000
-                    │
-          ┌─────────┴─────────┐
-          ▼                   ▼
-     Data Services     Recommendation Engine
-          │                   │
-          ▼                   ├── ML Model
-       db_api.py              ├── ROI
-          │                   ├── Feasibility
-          ▼                   └── Ranking
-    Real Database/API
-```
-
-During development:
-
-```text
-Flask UI
-   ↓
-FastAPI
-   ↓
-data_api.py
-   ↓
-json_api.py
-   ↓
-JSON Server
-```
-
-During production:
-
-```text
-Flask UI
-   ↓
-FastAPI
-   ↓
-data_api.py
-   ↓
-db_api.py
-   ↓
-Real Database/API
-```
-
----
-
-# 20. Recommended Ports
-
-```text
-JSON Server     http://localhost:3000
-Flask UI        http://localhost:5000
-FastAPI         http://localhost:8000
-```
-
-If React is used instead of Flask:
-
-```text
-React/Vite      http://localhost:5173
-FastAPI         http://localhost:8000
-JSON Server     http://localhost:3000
-```
-
----
-
-# 21. Git
-
-Current backend work can be kept on:
-
-```text
-FullBackend
-```
-
-Check branch:
+Check the active branch:
 
 ```powershell
 git branch
 ```
 
-Commit changes:
+Inspect changes:
+
+```powershell
+git status
+```
+
+Verify that `.env` is ignored:
+
+```powershell
+git check-ignore -v .env
+```
+
+Stage the project:
 
 ```powershell
 git add .
-git commit -m "Update CarbonWise backend"
-git push
 ```
 
-Do not commit:
+Check staged files **before committing**:
+
+```powershell
+git status
+```
+
+The real `.env` must not appear under "Changes to be committed".
+
+Commit example:
+
+```powershell
+git commit -m "Migrate backend to Neon and integrate ML recommendations"
+```
+
+Push the FullBackend branch:
+
+```powershell
+git push origin FullBackend
+```
+
+---
+
+## 14. Security Notes
+
+Never commit:
 
 ```text
 .env
-venv/
-__pycache__/
-.pytest_cache/
+real database passwords
+API keys
+private tokens
+local credential files
+```
+
+Safe to commit:
+
+```text
+.env.example
+recommendation_engine/ml/model.pkl
+recommendation_engine/ml/dataset.csv
+tests_neon/
+pytest.ini
+```
+
+Before pushing to a public remote, always review:
+
+```powershell
+git diff --cached
 ```
 
 ---
 
-# 22. Development Rules
+# CarbonWise Backend Status
 
-When extending CarbonWise, keep these rules:
-
-1. UI communicates with FastAPI.
-2. UI should not call the recommendation engine directly.
-3. FastAPI handles HTTP/API responsibilities.
-4. Recommendation calculations stay inside `recommendation_engine/`.
-5. Database access goes through `data_api.py`.
-6. `json_api.py` is only the temporary JSON Server implementation.
-7. The future `db_api.py` should provide the same interface.
-8. Secrets belong in `.env`, never in Git.
-9. Factory IDs are UUID strings, not integers.
-10. Run the test suite after backend changes.
-
----
-
-# 23. Quick Start
-
-### Terminal 1 — JSON Server
-
-```powershell
-cd C:\Users\Asus\Desktop\Projects\aster-hackout\json-server-api
-npm start
+```text
+FastAPI                 OK
+Neon PostgreSQL         OK
+Emission calculation    OK
+Emission ranking        OK
+Random Forest ML        OK
+Recommendation engine   OK
+Saved recommendations   OK
+End-to-end tests         OK
 ```
-
-### Terminal 2 — FastAPI
-
-```powershell
-cd C:\Users\Asus\Desktop\Projects\aster-hackout
-
-.\backend\venv\Scripts\Activate.ps1
-
-$env:PYTHONPATH = "$PWD;$PWD\backend"
-
-python -m uvicorn backend.main:app --reload --port 8000
-```
-
-### Terminal 3 — Tests
-
-```powershell
-cd C:\Users\Asus\Desktop\Projects\aster-hackout
-
-pytest -v
-```
-
-### Optional Terminal 4 — Flask UI
-
-```powershell
-cd flask-ui
-python app.py
-```
-
----
-
-# CarbonWise
-
-**AI-Powered Industrial Emission Leak-Point Detector & Circular Alternative Recommender**
-
-The main goal of the architecture is to keep the UI, API layer, data layer, and recommendation engine separate so every part can be replaced or improved independently.

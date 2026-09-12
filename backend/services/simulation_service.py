@@ -1,4 +1,4 @@
-from services.json_api import create_resource
+from services.data_api import create_resource
 
 
 async def save_simulation(data: dict):

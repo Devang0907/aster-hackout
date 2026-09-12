@@ -1,7 +1,6 @@
 # ============================================
 # Python
 # ============================================
-
 __pycache__/
 *.py[cod]
 *$py.class
@@ -11,6 +10,7 @@ venv/
 .venv/
 env/
 ENV/
+backend/venv/
 
 # Python packaging
 build/
@@ -18,81 +18,59 @@ dist/
 *.egg-info/
 
 # ============================================
-# Testing
+# Testing / coverage
 # ============================================
-
 .pytest_cache/
 .coverage
+.coverage.*
 htmlcov/
+.tox/
+.nox/
 
 # ============================================
-# Environment / Secrets
+# Environment variables / secrets
 # ============================================
-
 .env
 .env.*
 !.env.example
 
 # ============================================
-# Node.js
+# Node.js / frontend
 # ============================================
-
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-
-# ============================================
-# Frontend build output
-# ============================================
-
-dist/
-build/
 .vite/
 
 # ============================================
 # IDE / Editor
 # ============================================
-
 .vscode/
 .idea/
 
 # ============================================
 # OS files
 # ============================================
-
 .DS_Store
 Thumbs.db
 desktop.ini
 
 # ============================================
-# Logs
+# Logs / temporary files
 # ============================================
-
 *.log
 logs/
-
-# ============================================
-# Temporary files
-# ============================================
-
 *.tmp
 *.temp
 *.bak
 
 # ============================================
-# ML temporary/generated files
+# ML generated scratch files
 # ============================================
-
 *.joblib
 
-# NOTE:
-# recommendation_engine/ml/model.pkl is intentionally
-# tracked because CarbonWise requires the trained model.
+# The trained production/demo model is intentionally committed.
+# Do not add recommendation_engine/ml/model.pkl here.
 
-# ============================================
-# Local database backups
-# ============================================
-
-json-server-api/db.backup.json

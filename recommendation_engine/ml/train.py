@@ -3,11 +3,8 @@ import joblib
 import pandas as pd
 
 from sklearn.model_selection import KFold, cross_validate
-from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_squared_error
-from sklearn.metrics import r2_score
 
-from models.recommendation_model import get_models
+from recommendation_engine.models.recommendation_model import get_models
 
 
 # --------------------------------------------------
@@ -53,9 +50,51 @@ TARGET = "co2_reduction"
 # Load dataset
 # --------------------------------------------------
 
+print("Loading dataset...")
+
 df = pd.read_csv(DATASET_PATH)
 
+print(f"Dataset rows: {len(df)}")
+
+
+# --------------------------------------------------
+# Check required columns
+# --------------------------------------------------
+
+required_columns = FEATURES + [TARGET]
+
+missing_columns = [
+    column
+    for column in required_columns
+    if column not in df.columns
+]
+
+if missing_columns:
+    raise ValueError(
+        f"Dataset is missing columns: {missing_columns}"
+    )
+
+
+# --------------------------------------------------
+# Remove invalid / missing rows
+# --------------------------------------------------
+
+df = df.dropna(
+    subset=required_columns
+)
+
+print(
+    f"Rows after removing missing values: "
+    f"{len(df)}"
+)
+
+
+# --------------------------------------------------
+# Prepare X and y
+# --------------------------------------------------
+
 X = df[FEATURES]
+
 y = df[TARGET]
 
 
@@ -70,6 +109,10 @@ cv = KFold(
 )
 
 
+# --------------------------------------------------
+# Load models
+# --------------------------------------------------
+
 models = get_models()
 
 results = []
@@ -79,7 +122,12 @@ results = []
 # Evaluate models
 # --------------------------------------------------
 
+print("\nTraining and evaluating models...")
+
+
 for name, model in models.items():
+
+    print(f"\nEvaluating: {name}")
 
     scores = cross_validate(
         model,
@@ -91,125 +139,179 @@ for name, model in models.items():
             "neg_root_mean_squared_error",
             "r2"
         ],
-        return_train_score=True
+        return_train_score=True,
+        n_jobs=-1
     )
 
-    train_mae = -scores["train_neg_mean_absolute_error"].mean()
 
-    validation_mae = -scores[
-        "test_neg_mean_absolute_error"
-    ].mean()
+    # ----------------------------------------------
+    # Training MAE
+    # ----------------------------------------------
 
-    validation_rmse = -scores[
-        "test_neg_root_mean_squared_error"
-    ].mean()
+    train_mae = (
+        -scores[
+            "train_neg_mean_absolute_error"
+        ].mean()
+    )
 
-    validation_r2 = scores[
-        "test_r2"
-    ].mean()
 
-    overfit_gap = validation_mae - train_mae
+    # ----------------------------------------------
+    # Validation MAE
+    # ----------------------------------------------
+
+    validation_mae = (
+        -scores[
+            "test_neg_mean_absolute_error"
+        ].mean()
+    )
+
+
+    # ----------------------------------------------
+    # Validation RMSE
+    # ----------------------------------------------
+
+    validation_rmse = (
+        -scores[
+            "test_neg_root_mean_squared_error"
+        ].mean()
+    )
+
+
+    # ----------------------------------------------
+    # Validation R²
+    # ----------------------------------------------
+
+    validation_r2 = (
+        scores[
+            "test_r2"
+        ].mean()
+    )
+
+
+    # ----------------------------------------------
+    # Overfitting difference
+    # ----------------------------------------------
+
+    overfit_gap = (
+        validation_mae
+        - train_mae
+    )
+
 
     results.append({
-        "name": name,
-        "train_mae": train_mae,
-        "validation_mae": validation_mae,
-        "validation_rmse": validation_rmse,
-        "validation_r2": validation_r2,
-        "overfit_gap": overfit_gap
+
+        "name":
+            name,
+
+        "train_mae":
+            train_mae,
+
+        "validation_mae":
+            validation_mae,
+
+        "validation_rmse":
+            validation_rmse,
+
+        "validation_r2":
+            validation_r2,
+
+        "overfit_gap":
+            overfit_gap
     })
 
 
 # --------------------------------------------------
-# Display results
+# Display model comparison
 # --------------------------------------------------
 
-print("\n==========================================")
+print("\n")
+print("=" * 55)
 print("MODEL COMPARISON")
-print("==========================================")
+print("=" * 55)
+
 
 for result in results:
 
-    print(f"\nModel: {result['name']}")
+    print(
+        f"\nModel: "
+        f"{result['name']}"
+    )
 
     print(
-        f"Train MAE: "
+        f"Train MAE:        "
         f"{result['train_mae']:.2f}"
     )
 
     print(
-        f"Validation MAE: "
+        f"Validation MAE:   "
         f"{result['validation_mae']:.2f}"
     )
 
     print(
-        f"Validation RMSE: "
+        f"Validation RMSE:  "
         f"{result['validation_rmse']:.2f}"
     )
 
     print(
-        f"Validation R²: "
+        f"Validation R²:    "
         f"{result['validation_r2']:.4f}"
     )
 
     print(
-        f"Overfit Gap: "
+        f"Overfit Gap:      "
         f"{result['overfit_gap']:.2f}"
     )
 
 
 # --------------------------------------------------
 # Select best model
-# --------------------------------------------------
-
-# First find models with reasonable overfitting.
 #
-# Here we use a simple rule:
-# validation MAE should not be more than
-# 50% worse than training MAE.
+# Lowest Validation MAE wins.
+#
+# Validation MAE measures how far predictions are
+# from actual values on unseen validation data.
+# --------------------------------------------------
 
-acceptable_models = [
-
-    result
-    for result in results
-
-    if result["validation_mae"]
-    <= result["train_mae"] * 1.5
-]
-
-
-# If no model passes the overfitting rule,
-# choose the model with lowest validation MAE.
-
-if acceptable_models:
-
-    best_result = min(
-        acceptable_models,
-        key=lambda x: x["validation_mae"]
-    )
-
-else:
-
-    best_result = min(
-        results,
-        key=lambda x: x["validation_mae"]
-    )
+best_result = min(
+    results,
+    key=lambda x:
+        x["validation_mae"]
+)
 
 
-best_model_name = best_result["name"]
+best_model_name = (
+    best_result["name"]
+)
 
-best_model = models[best_model_name]
+best_model = (
+    models[
+        best_model_name
+    ]
+)
 
 
 # --------------------------------------------------
-# Train selected model on complete dataset
+# Train selected model on entire dataset
 # --------------------------------------------------
 
-best_model.fit(X, y)
+print("\n")
+print("=" * 55)
+print("TRAINING FINAL MODEL")
+print("=" * 55)
+
+print(
+    f"\nSelected model: "
+    f"{best_model_name}"
+)
+
+best_model.fit(
+    X,
+    y
+)
 
 
 # --------------------------------------------------
-# Save model
+# Save trained model
 # --------------------------------------------------
 
 joblib.dump(
@@ -218,12 +320,17 @@ joblib.dump(
 )
 
 
-print("\n==========================================")
+# --------------------------------------------------
+# Final output
+# --------------------------------------------------
+
+print("\n")
+print("=" * 55)
 print("BEST MODEL")
-print("==========================================")
+print("=" * 55)
 
 print(
-    f"Selected Model: "
+    f"\nSelected Model: "
     f"{best_model_name}"
 )
 
@@ -243,10 +350,23 @@ print(
 )
 
 print(
+    f"Train MAE: "
+    f"{best_result['train_mae']:.2f}"
+)
+
+print(
     f"Overfit Gap: "
     f"{best_result['overfit_gap']:.2f}"
 )
 
 print(
-    f"\nModel saved to: {MODEL_PATH}"
+    f"\nModel saved to:"
+)
+
+print(
+    MODEL_PATH
+)
+
+print(
+    "\nTraining completed successfully."
 )

@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from services.json_api import get_resource
+from services.data_api  import get_resource
 
 router = APIRouter(
     prefix="/api/materials",
