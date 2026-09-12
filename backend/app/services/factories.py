@@ -9,6 +9,7 @@ from app.services.authorization import (
     assert_factory_owner_access,
 )
 from app.services.errors import ConflictError, ForbiddenError
+from app.security.passwords import hash_password
 
 
 async def list_accessible_factories(user: UserContext, database: Any) -> list[Any]:
@@ -71,26 +72,35 @@ async def create_and_assign_manager(
     database: Any,
 ) -> Any:
     await assert_factory_owner_access(owner, factory_id, database)
-    manager_id = str(payload.id)
-    existing_assignment = await database.factory.find_first(where={"managerId": manager_id})
-    if existing_assignment is not None and str(existing_assignment.id) != str(factory_id):
-        raise ConflictError("manager is already assigned to another factory")
-
-    existing_by_id = await database.user.find_unique(where={"id": manager_id})
-    existing_by_email = await database.user.find_unique(where={"email": str(payload.email).lower()})
-    if existing_by_email is not None and str(existing_by_email.id) != manager_id:
-        raise ConflictError("email is already assigned to another account")
-    existing_role = (
-        str(getattr(existing_by_id.role, "value", existing_by_id.role))
-        if existing_by_id is not None
-        else None
-    )
-    if existing_role is not None and existing_role != UserRole.factory_manager.value:
-        raise ConflictError("the supplied user ID belongs to a non-manager account")
-    if existing_by_id is not None and not existing_by_id.isActive:
-        raise ConflictError("the supplied manager account is inactive")
+    if payload.id is not None:
+        manager_id = str(payload.id)
+        existing_assignment = await database.factory.find_first(where={"managerId": manager_id})
+        if existing_assignment is not None and str(existing_assignment.id) != str(factory_id):
+            raise ConflictError("manager is already assigned to another factory")
+        existing_by_id = await database.user.find_unique(where={"id": manager_id})
+        if existing_by_id is None or existing_by_id.role != UserRole.factory_manager:
+            raise ConflictError("the supplied user ID is not a factory manager")
+        if not existing_by_id.isActive:
+            raise ConflictError("the supplied manager account is inactive")
+    else:
+        existing_by_id = None
+        if payload.password is None:
+            raise ConflictError("a password is required for a new manager account")
+        existing_by_email = await database.user.find_unique(where={"email": str(payload.email).lower()})
+        if existing_by_email is not None:
+            raise ConflictError("email is already assigned to another account")
+        import uuid
+        manager_id = str(uuid.uuid4())
+    factory = await database.factory.find_first(where={"id": str(factory_id)})
+    if factory is not None and factory.managerId is not None:
+        raise ConflictError("this factory already has a manager")
 
     manager_data = to_prisma_data(payload.model_dump(exclude_none=True))
+    manager_data.pop("password", None)
+    manager_data.pop("id", None)
+    manager_data["id"] = manager_id
+    if payload.password is not None:
+        manager_data["passwordHash"] = hash_password(payload.password)
     manager_data["email"] = str(payload.email).lower()
     manager_data["role"] = UserRole.factory_manager.value
     async with database.tx() as transaction:

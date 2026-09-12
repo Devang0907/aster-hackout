@@ -27,9 +27,10 @@ class UserCreate(ApiModel):
 
 
 class ManagerAccountCreate(ApiModel):
-    id: UUID
+    id: UUID | None = None
     fullName: Annotated[str, Field(min_length=1, max_length=150)]
     email: EmailStr
+    password: Annotated[str, Field(min_length=8, max_length=128)] | None = None
     phone: Annotated[str, Field(max_length=20)] | None = None
 
     @field_validator("email")

@@ -1,9 +1,14 @@
 import argparse
 import asyncio
+import os
+import sys
 from datetime import datetime
 from decimal import Decimal
 
 from prisma import Prisma
+
+sys.path.insert(0, str(__file__).split("prisma")[0].rstrip("\\/"))
+from app.security.passwords import hash_password
 
 MATERIALS = [
     ("MAT-VPOLY", "Virgin Polyester", "Polymer", False, True, Decimal("35")),
@@ -58,6 +63,7 @@ DEMO_PERIOD_ID = "00000000-0000-0000-0000-000000000020"
 DEMO_OWNER_EMAIL = "demo-owner@example.com"
 DEMO_MANAGER_EMAIL = "demo-manager@example.com"
 DEMO_ADMIN_EMAIL = "demo-admin@example.com"
+DEMO_ADMIN_PASSWORD = os.getenv("DEMO_ADMIN_PASSWORD", "Admin@12345")
 
 
 async def seed_demo_tenant(database: Prisma, material_ids: dict[str, str]) -> None:
@@ -68,9 +74,10 @@ async def seed_demo_tenant(database: Prisma, material_ids: dict[str, str]) -> No
                 "id": DEMO_ADMIN_ID,
                 "fullName": "Demo Platform Admin",
                 "email": DEMO_ADMIN_EMAIL,
+                "passwordHash": hash_password(DEMO_ADMIN_PASSWORD),
                 "role": "admin",
             },
-            "update": {"isActive": True},
+            "update": {"isActive": True, "passwordHash": hash_password(DEMO_ADMIN_PASSWORD)},
         },
     )
     await database.user.upsert(
