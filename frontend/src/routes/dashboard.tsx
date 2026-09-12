@@ -5,8 +5,6 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { FactoryOnboarding } from "@/components/dashboard/FactoryOnboarding";
 import { FactoryProfileForm, FactoryProfile } from "@/components/dashboard/FactoryProfileForm";
-import { EmissionsAnalysisForm } from "@/components/dashboard/EmissionsAnalysisForm";
-import { RecommendationList } from "@/components/dashboard/RecommendationList";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { LatestEmissionBreakdown } from "@/components/dashboard/LatestEmissionBreakdown";
@@ -69,17 +67,6 @@ function Dashboard() {
                 key={`breakdown-${analysisVersion}`}
                 factoryId={factory.id}
               />
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
-                <EmissionsAnalysisForm
-                  factoryId={factory.id}
-                  onComplete={() => setAnalysisVersion((version) => version + 1)}
-                />
-                <RecommendationList
-                  key={`recommendations-${analysisVersion}`}
-                  factoryId={factory.id}
-                  onStatusChanged={() => setAnalysisVersion((version) => version + 1)}
-                />
-              </div>
               <RecentActivity key={`activity-${analysisVersion}`} factoryId={factory.id} />
             </div>
           )}
