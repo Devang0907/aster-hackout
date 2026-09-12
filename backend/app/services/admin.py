@@ -4,31 +4,6 @@ from uuid import UUID
 from app.schemas.user import UserContext, UserRole
 from app.services.errors import ForbiddenError, NotFoundError
 
-USER_BASIC_FIELDS = {
-    "id": True,
-    "fullName": True,
-    "email": True,
-    "role": True,
-    "phone": True,
-    "isActive": True,
-    "createdAt": True,
-    "updatedAt": True,
-}
-
-FACTORY_BASIC_FIELDS = {
-    "id": True,
-    "ownerId": True,
-    "managerId": True,
-    "name": True,
-    "industryType": True,
-    "city": True,
-    "state": True,
-    "country": True,
-    "isActive": True,
-    "createdAt": True,
-    "updatedAt": True,
-}
-
 
 def _assert_admin(user: UserContext) -> None:
     if user.role != UserRole.admin:
@@ -37,13 +12,12 @@ def _assert_admin(user: UserContext) -> None:
 
 async def list_user_metadata(user: UserContext, database: Any) -> list[Any]:
     _assert_admin(user)
-    return await database.user.find_many(select=USER_BASIC_FIELDS, order={"createdAt": "desc"})
+    return await database.user.find_many(order={"createdAt": "desc"})
 
 
 async def list_factory_metadata(user: UserContext, database: Any) -> list[Any]:
     _assert_admin(user)
     return await database.factory.find_many(
-        select=FACTORY_BASIC_FIELDS,
         order={"createdAt": "desc"},
     )
 
@@ -89,3 +63,13 @@ async def set_factory_active(
             }
         )
     return result
+
+
+async def get_statistics(user: UserContext, database: Any) -> dict[str, int]:
+    _assert_admin(user)
+    user_count = await database.user.count()
+    reporting_period_count = await database.reportingperiod.count()
+    return {
+        "userCount": user_count,
+        "reportingPeriodCount": reporting_period_count,
+    }
