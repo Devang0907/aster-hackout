@@ -6,7 +6,6 @@ import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { FactoryOnboarding } from "@/components/dashboard/FactoryOnboarding";
 import { FactoryProfileForm, FactoryProfile } from "@/components/dashboard/FactoryProfileForm";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
-import { RecentActivity } from "@/components/dashboard/RecentActivity";
 import { LatestEmissionBreakdown } from "@/components/dashboard/LatestEmissionBreakdown";
 import { getSelectedFactoryId } from "@/lib/factory";
 
@@ -58,7 +57,10 @@ function Dashboard() {
               {error}
             </div>
           ) : showOnboarding || !factory ? (
-            <FactoryOnboarding onCreated={(created) => { setFactory(created); setShowOnboarding(false); }} />
+            <FactoryOnboarding 
+              onCreated={(created) => { setFactory(created); setShowOnboarding(false); }} 
+              onCancel={() => setShowOnboarding(false)}
+            />
           ) : (
             <div className="space-y-6">
               <FactoryProfileForm factory={factory} onUpdated={setFactory} />
@@ -67,7 +69,7 @@ function Dashboard() {
                 key={`breakdown-${analysisVersion}`}
                 factoryId={factory.id}
               />
-              <RecentActivity key={`activity-${analysisVersion}`} factoryId={factory.id} />
+            
             </div>
           )}
         </DashboardLayout>

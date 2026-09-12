@@ -3,9 +3,10 @@ import { post } from "@/lib/api";
 
 interface FactoryOnboardingProps {
   onCreated: (factory: { id: string; name: string }) => void;
+  onCancel?: () => void;
 }
 
-export function FactoryOnboarding({ onCreated }: FactoryOnboardingProps) {
+export function FactoryOnboarding({ onCreated, onCancel }: FactoryOnboardingProps) {
   const [form, setForm] = useState({
     name: "",
     industryType: "",
@@ -53,10 +54,19 @@ export function FactoryOnboarding({ onCreated }: FactoryOnboardingProps) {
     "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-primary focus:outline-none focus:ring-2 focus:ring-primary/40";
 
   return (
-    <section className="mx-auto max-w-4xl rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8">
+    <section className="relative mx-auto max-w-4xl rounded-2xl border border-border bg-surface p-6 shadow-sm sm:p-8">
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="absolute right-6 top-6 rounded-full border border-border px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-secondary hover:bg-mist"
+        >
+          Cancel
+        </button>
+      )}
       <div className="mb-8 max-w-2xl">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-          First-login setup
+          {onCancel ? "Add new factory" : "First-login setup"}
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-primary">Tell us about your factory</h1>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">

@@ -96,15 +96,19 @@ export function SummaryCards({ factoryId }: SummaryCardsProps) {
       {cards.map((card) => (
         <div
           key={card.title}
-          className="rounded-xl border border-border bg-surface p-6"
+          className="rounded-xl border border-border bg-surface p-6 flex flex-col justify-between"
         >
           <p className="text-sm font-medium text-secondary">{card.title}</p>
-          <p className={`mt-2 text-3xl font-semibold ${card.color}`}>
-            {card.value}
-            <span className="text-lg font-normal text-muted-foreground ml-1">
-              {card.unit}
-            </span>
-          </p>
+          <div className="mt-4">
+            <p className={`text-3xl font-semibold ${card.color}`}>
+              {card.value}
+              {card.unit && (
+                <span className="text-lg font-normal text-muted-foreground ml-1">
+                  {card.unit}
+                </span>
+              )}
+            </p>
+          </div>
         </div>
       ))}
     </div>

@@ -118,7 +118,7 @@ async def create_and_assign_manager(
                 "action": "MANAGER_ASSIGNED",
                 "entityType": "Factory",
                 "entityId": str(factory_id),
-                "metadata": {"managerId": manager_id},
+                "metadata": to_prisma_data({"managerId": manager_id}),
             }
         )
     return manager_factory
