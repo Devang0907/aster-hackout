@@ -1,4 +1,3 @@
-import uuid
 import httpx
 
 
@@ -105,15 +104,15 @@ def test_seeded_carbon_results():
 
 def test_json_server_crud():
 
-    test_id = f"test-{uuid.uuid4()}"
-
     data = {
-        "id": test_id,
         "type": "pytest",
         "message": "temporary test record"
     }
 
+    # -------------------------
     # CREATE
+    # -------------------------
+
     response = httpx.post(
         f"{BASE_URL}/audit_logs",
         json=data
@@ -121,17 +120,35 @@ def test_json_server_crud():
 
     assert response.status_code in (200, 201)
 
+    created = response.json()
+
+    assert "id" in created
+
+    test_id = created["id"]
+
+
+    # -------------------------
     # READ
+    # -------------------------
+
     response = httpx.get(
         f"{BASE_URL}/audit_logs/{test_id}"
     )
 
     assert response.status_code == 200
-    assert response.json()["id"] == test_id
 
+    record = response.json()
+
+    assert str(record["id"]) == str(test_id)
+
+    assert record["message"] == "temporary test record"
+
+
+    # -------------------------
     # UPDATE
+    # -------------------------
+
     updated_data = {
-        "id": test_id,
         "type": "pytest",
         "message": "updated test record"
     }
@@ -143,19 +160,26 @@ def test_json_server_crud():
 
     assert response.status_code == 200
 
-    assert (
-        response.json()["message"]
-        == "updated test record"
-    )
+    updated = response.json()
 
+    assert updated["message"] == "updated test record"
+
+
+    # -------------------------
     # DELETE
+    # -------------------------
+
     response = httpx.delete(
         f"{BASE_URL}/audit_logs/{test_id}"
     )
 
     assert response.status_code in (200, 204)
 
+
+    # -------------------------
     # VERIFY DELETE
+    # -------------------------
+
     response = httpx.get(
         f"{BASE_URL}/audit_logs/{test_id}"
     )
