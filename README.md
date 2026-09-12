@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/favicon.ico" alt="CarbonLoop Logo" width="150"/>
+  <img src="frontend/public/favicon.ico" alt="CarbonLoop Logo" width="150" style="background-color:white;"/>
 </p>
 
 <h1 align="center">CarbonLoop</h1>
