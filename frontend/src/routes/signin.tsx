@@ -26,7 +26,9 @@ function SignIn() {
       if (response.ok) {
         setToken(data.token);
         setUser(data.user);
-        navigate({ to: "/dashboard" });
+        // Redirect admin to /admin, others to /dashboard
+        const redirectPath = data.user.role === "admin" ? "/admin" : "/dashboard";
+        navigate({ to: redirectPath });
       } else {
         setError(data.detail || "Sign in failed");
       }
