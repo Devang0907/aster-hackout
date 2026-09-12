@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { post } from "@/lib/api";
-import { setToken, setUser, AuthUser } from "@/lib/auth";
+import { setToken, setUser } from "@/lib/auth";
 
 export const Route = createFileRoute("/signin")({
   component: SignIn,
@@ -26,7 +26,7 @@ function SignIn() {
       if (response.ok) {
         setToken(data.token);
         setUser(data.user);
-        navigate({ to: "/dashboard" as any });
+        navigate({ to: "/dashboard" });
       } else {
         setError(data.detail || "Sign in failed");
       }
@@ -40,11 +40,7 @@ function SignIn() {
   return (
     <div className="min-h-screen flex bg-background">
       <div className="hidden lg:block lg:w-1/2 h-screen overflow-hidden">
-        <img
-          src="/sign-img.png"
-          alt="Sign in"
-          className="h-full w-full object-cover"
-        />
+        <img src="/sign-img.png" alt="Sign in" className="h-full w-full object-cover" />
       </div>
       <div className="flex w-full items-center justify-center lg:w-1/2 min-h-screen">
         <div className="w-full max-w-md p-8">
@@ -52,13 +48,13 @@ function SignIn() {
           <p className="text-sm text-muted-foreground mb-8">
             Enter your credentials to access your account
           </p>
-          
+
           {error && (
             <div className="mb-6 p-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
               {error}
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-secondary mb-2">
@@ -74,7 +70,7 @@ function SignIn() {
                 required
               />
             </div>
-            
+
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-secondary mb-2">
                 Password
@@ -89,7 +85,7 @@ function SignIn() {
                 required
               />
             </div>
-            
+
             <button
               type="submit"
               disabled={loading}
@@ -98,7 +94,13 @@ function SignIn() {
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
-          
+
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            <a href="/reset-password" className="text-primary hover:underline">
+              Forgot your password?
+            </a>
+          </p>
+
           <p className="mt-6 text-center text-xs text-muted-foreground">
             Don't have an account?{" "}
             <a href="/register" className="text-primary hover:underline">

@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { logout, getUser } from "@/lib/auth";
 
 interface DashboardLayoutProps {
@@ -8,6 +8,12 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const user = getUser();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate({ to: "/signin" });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -71,13 +77,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <p className="text-sm font-medium text-primary truncate">
                   {user?.fullName || "User"}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {user?.email || ""}
-                </p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email || ""}</p>
               </div>
             </div>
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="mt-3 w-full rounded-lg border border-border px-3 py-2 text-xs font-medium text-secondary hover:bg-mist hover:text-primary"
             >
               Sign Out
@@ -94,17 +98,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <h2 className="text-lg font-semibold text-primary">Dashboard</h2>
             <div className="flex items-center gap-4">
               {/* Factory Selector will be added here */}
-              <div className="text-sm text-muted-foreground">
-                Factory Selector
-              </div>
+              <div className="text-sm text-muted-foreground">Factory Selector</div>
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="p-6">
-          {children || <Outlet />}
-        </main>
+        <main className="p-6">{children || <Outlet />}</main>
       </div>
     </div>
   );

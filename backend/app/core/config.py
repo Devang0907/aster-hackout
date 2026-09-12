@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     jwt_algorithm: Literal["HS256", "HS384", "HS512"] = "HS256"
     jwt_audience: str | None = None
     jwt_issuer: str | None = None
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: SecretStr | None = None
+    smtp_from_email: str | None = None
+    email_otp_expiry_seconds: int = 600
     cors_origins: str = ""
     cors_origin_regex: str | None = None
 

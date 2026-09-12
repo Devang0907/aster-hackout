@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { post } from "@/lib/api";
 import { setToken, setUser } from "@/lib/auth";
 
@@ -13,12 +13,32 @@ function Register() {
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
+  const [challengeToken, setChallengeToken] = useState("");
+  const [emailVerificationToken, setEmailVerificationToken] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (resendCooldown === 0) return;
+    const timer = window.setInterval(() => {
+      setResendCooldown((seconds) => Math.max(seconds - 1, 0));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
+
+  const requestOtp = async () => {
+    const response = await post("/api/v1/auth/request-email-otp", { email });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || "Failed to send verification code");
+    setChallengeToken(data.challengeToken);
+    setOtp("");
+    setResendCooldown(30);
+  };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,11 +46,24 @@ function Register() {
     setLoading(true);
 
     try {
-      // Simulate sending OTP - in production this would call an OTP endpoint
-      // For now, we'll skip OTP and go directly to details
-      setStep("details");
+      await requestOtp();
+      setStep("otp");
     } catch (err) {
-      setError("Failed to send verification code");
+      setError(err instanceof Error ? err.message : "Failed to send verification code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (loading || resendCooldown > 0) return;
+    setError("");
+    setLoading(true);
+
+    try {
+      await requestOtp();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resend verification code");
     } finally {
       setLoading(false);
     }
@@ -42,10 +75,17 @@ function Register() {
     setLoading(true);
 
     try {
-      // Simulate OTP verification
+      const response = await post("/api/v1/auth/verify-email-otp", {
+        email,
+        code: otp,
+        challengeToken,
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Invalid verification code");
+      setEmailVerificationToken(data.emailVerificationToken);
       setStep("details");
     } catch (err) {
-      setError("Invalid verification code");
+      setError(err instanceof Error ? err.message : "Invalid verification code");
     } finally {
       setLoading(false);
     }
@@ -67,13 +107,14 @@ function Register() {
         fullName: name,
         email,
         password,
+        emailVerificationToken,
       });
       const data = await response.json();
 
       if (response.ok) {
         setToken(data.token);
         setUser(data.user);
-        navigate({ to: "/dashboard" as any });
+        navigate({ to: "/dashboard" });
       } else {
         setError(data.detail || "Registration failed");
       }
@@ -87,11 +128,7 @@ function Register() {
   return (
     <div className="min-h-screen flex bg-background">
       <div className="hidden lg:block lg:w-1/2 h-screen overflow-hidden">
-        <img
-          src="/register-img.png"
-          alt="Register"
-          className="h-full w-full object-cover"
-        />
+        <img src="/register-img.png" alt="Register" className="h-full w-full object-cover" />
       </div>
       <div className="flex w-full items-center justify-center lg:w-1/2 min-h-screen">
         <div className="w-full max-w-md p-8">
@@ -126,9 +163,10 @@ function Register() {
               </div>
               <button
                 type="submit"
-                className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90"
+                disabled={loading}
+                className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                Send Verification Code
+                {loading ? "Sending..." : "Send Verification Code"}
               </button>
             </form>
           )}
@@ -149,15 +187,26 @@ function Register() {
                   maxLength={6}
                   required
                 />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Code sent to {email}
-                </p>
+                <p className="mt-2 text-xs text-muted-foreground">Code sent to {email}</p>
               </div>
               <button
                 type="submit"
-                className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90"
+                disabled={loading}
+                className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold uppercase tracking-[0.16em] text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
               >
-                Verify
+                {loading ? "Verifying..." : "Verify"}
+              </button>
+              <button
+                type="button"
+                onClick={handleResendOtp}
+                disabled={loading || resendCooldown > 0}
+                className="w-full text-xs text-muted-foreground hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {resendCooldown > 0
+                  ? `Resend code in ${resendCooldown}s`
+                  : loading
+                    ? "Sending..."
+                    : "Resend verification code"}
               </button>
               <button
                 type="button"
@@ -200,7 +249,10 @@ function Register() {
                 />
               </div>
               <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-secondary mb-2">
+                <label
+                  htmlFor="confirmPassword"
+                  className="block text-sm font-medium text-secondary mb-2"
+                >
                   Confirm Password
                 </label>
                 <input
